@@ -1,9 +1,13 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Query, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
+import { AuthGuard } from '../auth/auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 
 @ApiTags('admin')
 @Controller('admin')
+@UseGuards(AuthGuard, AdminGuard)
+@ApiBearerAuth()
 export class AdminController {
   constructor(private adminService: AdminService) {}
 

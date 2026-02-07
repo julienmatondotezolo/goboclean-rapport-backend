@@ -14,7 +14,9 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "create-admin": "ts-node scripts/create-admin.ts",
+    "create-user-invite": "ts-node scripts/create-user-with-invite.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

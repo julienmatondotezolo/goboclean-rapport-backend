@@ -47,13 +47,12 @@ export class MissionsService {
       facade_count: dto.facade_count || 1,
       additional_info: dto.additional_info || null,
       features: dto.features || {},
-      status: 'created',
+      status: 'assigned',
     };
 
-    // If workers are provided at creation, mark as assigned immediately
+    // Attach assigned workers if provided
     if (dto.assigned_workers && dto.assigned_workers.length > 0) {
       insertData.assigned_workers = dto.assigned_workers;
-      insertData.status = 'assigned';
     }
 
     const { data, error } = await supabase
@@ -235,7 +234,7 @@ export class MissionsService {
       throw new BadRequestException('One or more worker IDs are invalid');
     }
 
-    const newStatus = mission.status === 'created' ? 'assigned' : mission.status;
+    const newStatus = mission.status;
 
     const { data, error } = await supabase
       .from('missions')

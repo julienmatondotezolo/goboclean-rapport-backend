@@ -8,6 +8,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
+import { ReportsService } from '../reports/reports.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { AssignWorkersDto } from './dto/assign-workers.dto';
@@ -21,6 +22,7 @@ export class MissionsService {
     private readonly supabaseService: SupabaseService,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
+    private readonly reportsService: ReportsService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -130,7 +132,7 @@ export class MissionsService {
   }
 
   // ---------------------------------------------------------------------------
-  // UPDATE (admin)
+  // UPDATE (admin) — FIX 8: strip status to prevent state machine bypass
   // ---------------------------------------------------------------------------
   async updateMission(missionId: string, dto: UpdateMissionDto) {
     const supabase = this.supabaseService.getClient();
@@ -138,9 +140,15 @@ export class MissionsService {
     // Verify mission exists
     await this.getMissionRaw(missionId);
 
+    // Strip status field to prevent bypassing state machine transitions
+    const { status, ...safeDto } = dto as any;
+    if (status !== undefined) {
+      this.logger.warn(`Stripped 'status' field from updateMission PATCH for mission ${missionId}. Use dedicated state transition endpoints instead.`);
+    }
+
     const { data, error } = await supabase
       .from('missions')
-      .update(dto as any)
+      .update(safeDto)
       .eq('id', missionId)
       .select()
       .single();
@@ -191,8 +199,9 @@ export class MissionsService {
         );
       }
 
-      // Send cancellation email to workers
-      await this.emailService.sendMissionCancelledEmail(data);
+      // Send cancellation email to actual workers
+      const workerEmails = await this.resolveWorkerEmails(data.assigned_workers);
+      await this.emailService.sendMissionCancelledEmail(data, workerEmails);
     }
 
     this.logger.log(`Mission ${missionId} cancelled`);
@@ -305,11 +314,22 @@ export class MissionsService {
       throw new BadRequestException('At least one before-picture is required');
     }
 
+    // FIX 6: Validate file type and size
+    for (const file of files) {
+      if (!file.mimetype.startsWith('image/'))
+        throw new BadRequestException('Only image files are allowed');
+      if (file.size > 10 * 1024 * 1024)
+        throw new BadRequestException('Maximum file size is 10MB');
+    }
+
     // Upload photos to Supabase storage
+    // FIX 5: Store the path once and reuse for both upload and DB insert
     const photoUrls: string[] = [];
+    const storagePaths: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const storagePath = `missions/${missionId}/before/${Date.now()}_${i}.${file.originalname.split('.').pop() || 'jpg'}`;
+      storagePaths.push(storagePath);
       await this.supabaseService.uploadFile('roof-photos', storagePath, file.buffer, file.mimetype);
       const publicUrl = await this.supabaseService.getPublicUrl('roof-photos', storagePath);
       photoUrls.push(publicUrl);
@@ -340,13 +360,13 @@ export class MissionsService {
     }
 
     // Insert photos into photos table (linked to pre-report)
+    // FIX 5: Reuse the stored paths from the upload loop
     if (preReport) {
-      for (let i = 0; i < photoUrls.length; i++) {
-        const storagePath = `missions/${missionId}/before/${Date.now()}_${i}.jpg`;
+      for (let i = 0; i < storagePaths.length; i++) {
         await supabase.from('photos').insert({
           report_id: preReport.id,
           type: 'before',
-          storage_path: storagePath,
+          storage_path: storagePaths[i],
           order: i + 1,
         });
       }
@@ -425,11 +445,22 @@ export class MissionsService {
       throw new BadRequestException('At least one after-picture is required');
     }
 
+    // FIX 6: Validate file type and size
+    for (const file of files) {
+      if (!file.mimetype.startsWith('image/'))
+        throw new BadRequestException('Only image files are allowed');
+      if (file.size > 10 * 1024 * 1024)
+        throw new BadRequestException('Maximum file size is 10MB');
+    }
+
     // Upload after-pictures
+    // FIX 5: Store the path once and reuse for both upload and DB insert
     const afterPhotoUrls: string[] = [];
+    const afterStoragePaths: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const storagePath = `missions/${missionId}/after/${Date.now()}_${i}.${file.originalname.split('.').pop() || 'jpg'}`;
+      afterStoragePaths.push(storagePath);
       await this.supabaseService.uploadFile('roof-photos', storagePath, file.buffer, file.mimetype);
       const publicUrl = await this.supabaseService.getPublicUrl('roof-photos', storagePath);
       afterPhotoUrls.push(publicUrl);
@@ -475,13 +506,13 @@ export class MissionsService {
     }
 
     // Insert after-photos linked to final report
+    // FIX 5: Reuse the stored paths from the upload loop
     if (finalReport) {
-      for (let i = 0; i < afterPhotoUrls.length; i++) {
-        const storagePath = `missions/${missionId}/after/${Date.now()}_${i}.jpg`;
+      for (let i = 0; i < afterStoragePaths.length; i++) {
         await supabase.from('photos').insert({
           report_id: finalReport.id,
           type: 'after',
-          storage_path: storagePath,
+          storage_path: afterStoragePaths[i],
           order: i + 1,
         });
       }
@@ -506,6 +537,17 @@ export class MissionsService {
 
     if (error) {
       throw new BadRequestException(`Failed to complete mission: ${error.message}`);
+    }
+
+    // FIX 1: Generate PDF and send report email via ReportsService
+    if (finalReport) {
+      try {
+        await this.reportsService.generateAndSendReport(finalReport.id);
+        this.logger.log(`PDF generated and sent for report ${finalReport.id}`);
+      } catch (pdfError: any) {
+        this.logger.error(`Failed to generate/send PDF for report ${finalReport.id}: ${pdfError.message}`);
+        // Don't fail the mission completion if PDF generation fails — it can be retried
+      }
     }
 
     // Notify admins + worker about completion
@@ -555,12 +597,17 @@ export class MissionsService {
   }
 
   // ---------------------------------------------------------------------------
-  // RESCHEDULE (admin)
+  // RESCHEDULE (admin) — FIX 7: Block rescheduling active missions
   // ---------------------------------------------------------------------------
   async rescheduleMission(missionId: string, dto: RescheduleMissionDto) {
     const mission = await this.getMissionRaw(missionId);
 
-    if (mission.status === 'completed' || mission.status === 'cancelled') {
+    if (
+      mission.status === 'completed' ||
+      mission.status === 'cancelled' ||
+      mission.status === 'in_progress' ||
+      mission.status === 'waiting_completion'
+    ) {
       throw new BadRequestException(`Cannot reschedule a ${mission.status} mission`);
     }
 
@@ -621,6 +668,31 @@ export class MissionsService {
   }
 
   // ---------------------------------------------------------------------------
+  // EMAIL HELPER — resolve worker emails from UUIDs
+  // ---------------------------------------------------------------------------
+  private async resolveWorkerEmails(workerIds: string[]): Promise<string[]> {
+    if (!workerIds || workerIds.length === 0) return [];
+
+    const supabase = this.supabaseService.getClient();
+    const { data: workers } = await supabase
+      .from('users')
+      .select('email')
+      .in('id', workerIds);
+
+    return (workers || []).map((w) => w.email).filter(Boolean);
+  }
+
+  private async getAdminEmails(): Promise<string[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data: admins } = await supabase
+      .from('users')
+      .select('email')
+      .eq('role', 'admin');
+
+    return (admins || []).map((a) => a.email).filter(Boolean);
+  }
+
+  // ---------------------------------------------------------------------------
   // NOTIFICATION HELPERS
   // ---------------------------------------------------------------------------
 
@@ -637,8 +709,9 @@ export class MissionsService {
       );
     }
 
-    // Send assignment email
-    await this.emailService.sendMissionAssignedEmail(mission);
+    // FIX 2: Send assignment email to actual worker emails
+    const workerEmails = await this.resolveWorkerEmails(mission.assigned_workers);
+    await this.emailService.sendMissionAssignedEmail(mission, workerEmails);
   }
 
   private async notifyAdminsPreReport(mission: any) {
@@ -647,7 +720,7 @@ export class MissionsService {
     // Find all admins
     const { data: admins } = await supabase
       .from('users')
-      .select('id')
+      .select('id, email')
       .eq('role', 'admin');
 
     if (admins) {
@@ -662,8 +735,9 @@ export class MissionsService {
       }
     }
 
-    // Send pre-report email to admins
-    await this.emailService.sendPreReportEmail(mission);
+    // FIX 2: Send pre-report email to actual admin emails
+    const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
+    await this.emailService.sendPreReportEmail(mission, adminEmails);
   }
 
   private async notifyMissionCompleted(mission: any) {
@@ -672,7 +746,7 @@ export class MissionsService {
     // Notify admins
     const { data: admins } = await supabase
       .from('users')
-      .select('id')
+      .select('id, email')
       .eq('role', 'admin');
 
     if (admins) {
@@ -700,7 +774,13 @@ export class MissionsService {
       }
     }
 
-    // Send completion email
-    await this.emailService.sendMissionCompletedEmail(mission);
+    // FIX 2: Send completion email to admins + workers + client
+    const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
+    const workerEmails = await this.resolveWorkerEmails(mission.assigned_workers || []);
+    const recipientEmails = [...new Set([...adminEmails, ...workerEmails])];
+    if (mission.client_email) {
+      recipientEmails.push(mission.client_email);
+    }
+    await this.emailService.sendMissionCompletedEmail(mission, recipientEmails);
   }
 }

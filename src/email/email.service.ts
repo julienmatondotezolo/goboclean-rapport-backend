@@ -180,8 +180,12 @@ export class EmailService {
   // Mission-related emails
   // ---------------------------------------------------------------------------
 
-  async sendMissionAssignedEmail(mission: MissionData): Promise<void> {
-    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+  async sendMissionAssignedEmail(mission: MissionData, workerEmails: string[]): Promise<void> {
+    if (!workerEmails || workerEmails.length === 0) {
+      this.logger.log(`No worker emails provided for mission ${mission.id}, skipping assignment email`);
+      return;
+    }
+    const to = workerEmails;
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
     const appointmentDate = new Date(mission.appointment_time).toLocaleString('fr-BE', {
       dateStyle: 'full',
@@ -190,7 +194,7 @@ export class EmailService {
 
     const mailOptions = {
       from: this.configService.get<string>('SMTP_FROM'),
-      to, // In production, resolve worker emails from assigned_workers UUIDs
+      to,
       subject: `Nouvelle mission assignée — ${clientName}`,
       html: `
 <!DOCTYPE html>
@@ -224,13 +228,17 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     }
   }
 
-  async sendPreReportEmail(mission: MissionData): Promise<void> {
-    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+  async sendPreReportEmail(mission: MissionData, adminEmails: string[]): Promise<void> {
+    if (!adminEmails || adminEmails.length === 0) {
+      this.logger.log(`No admin emails provided for mission ${mission.id}, skipping pre-report email`);
+      return;
+    }
+    const to = adminEmails;
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
     const mailOptions = {
       from: this.configService.get<string>('SMTP_FROM'),
-      to, // Admin email
+      to,
       subject: `Pré-rapport soumis — ${clientName} — ${mission.client_address}`,
       html: `
 <!DOCTYPE html>
@@ -263,13 +271,17 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     }
   }
 
-  async sendMissionCompletedEmail(mission: MissionData): Promise<void> {
-    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+  async sendMissionCompletedEmail(mission: MissionData, recipientEmails: string[]): Promise<void> {
+    if (!recipientEmails || recipientEmails.length === 0) {
+      this.logger.log(`No recipient emails provided for mission ${mission.id}, skipping completion email`);
+      return;
+    }
+    const to = recipientEmails;
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
     const mailOptions = {
       from: this.configService.get<string>('SMTP_FROM'),
-      to, // Admin email; in production also send to client + worker
+      to,
       subject: `Mission terminée — ${clientName} — ${mission.client_address}`,
       html: `
 <!DOCTYPE html>
@@ -302,8 +314,12 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     }
   }
 
-  async sendMissionCancelledEmail(mission: MissionData): Promise<void> {
-    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+  async sendMissionCancelledEmail(mission: MissionData, workerEmails: string[]): Promise<void> {
+    if (!workerEmails || workerEmails.length === 0) {
+      this.logger.log(`No worker emails provided for mission ${mission.id}, skipping cancellation email`);
+      return;
+    }
+    const to = workerEmails;
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
     const mailOptions = {

@@ -110,7 +110,7 @@ export class NotificationsService {
 
     return {
       notifications: notifications || [],
-      unread_count: unreadCount || 0,
+      unreadCount: unreadCount || 0,
     };
   }
 

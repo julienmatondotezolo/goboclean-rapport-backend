@@ -108,6 +108,7 @@ CREATE TRIGGER update_missions_updated_at
 -- ============================================================================
 ALTER TABLE missions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can do everything on missions" ON missions;
 CREATE POLICY "Admins can do everything on missions"
   ON missions FOR ALL
   USING (
@@ -118,10 +119,12 @@ CREATE POLICY "Admins can do everything on missions"
     )
   );
 
+DROP POLICY IF EXISTS "Workers can view their assigned missions" ON missions;
 CREATE POLICY "Workers can view their assigned missions"
   ON missions FOR SELECT
   USING ((SELECT auth.uid()) = ANY(assigned_workers));
 
+DROP POLICY IF EXISTS "Workers can update their assigned missions" ON missions;
 CREATE POLICY "Workers can update their assigned missions"
   ON missions FOR UPDATE
   USING ((SELECT auth.uid()) = ANY(assigned_workers));
@@ -141,6 +144,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own push subscriptions" ON push_subscriptions;
 CREATE POLICY "Users manage own push subscriptions"
   ON push_subscriptions FOR ALL
   USING (user_id = (SELECT auth.uid()));
@@ -165,10 +169,12 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created
 
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
 CREATE POLICY "Users can view own notifications"
   ON notifications FOR SELECT
   USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
 CREATE POLICY "Users can update own notifications"
   ON notifications FOR UPDATE
   USING (user_id = (SELECT auth.uid()));

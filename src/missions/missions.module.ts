@@ -4,9 +4,10 @@ import { MissionsService } from './missions.service';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
+import { ReportsModule } from '../reports/reports.module';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, EmailModule],
+  imports: [AuthModule, NotificationsModule, EmailModule, ReportsModule],
   controllers: [MissionsController],
   providers: [MissionsService],
   exports: [MissionsService],

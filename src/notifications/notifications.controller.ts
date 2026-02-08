@@ -17,7 +17,9 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { NotificationsService, PushSubscriptionData } from './notifications.service';
+import { NotificationsService } from './notifications.service';
+import { SubscribePushDto } from './dto/subscribe-push.dto';
+import { UnsubscribePushDto } from './dto/unsubscribe-push.dto';
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -34,7 +36,7 @@ export class NotificationsController {
   @ApiResponse({ status: 201, description: 'Subscription registered' })
   async subscribe(
     @CurrentUser() user: any,
-    @Body() subscription: PushSubscriptionData,
+    @Body() subscription: SubscribePushDto,
   ) {
     return this.notificationsService.subscribe(user.id, subscription);
   }
@@ -47,9 +49,9 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Subscription removed' })
   async unsubscribe(
     @CurrentUser() user: any,
-    @Body('endpoint') endpoint: string,
+    @Body() dto: UnsubscribePushDto,
   ) {
-    return this.notificationsService.unsubscribe(user.id, endpoint);
+    return this.notificationsService.unsubscribe(user.id, dto.endpoint);
   }
 
   // -------------------------------------------------------------------------

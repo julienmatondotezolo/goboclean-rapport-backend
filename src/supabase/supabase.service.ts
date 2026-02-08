@@ -120,4 +120,80 @@ export class SupabaseService {
     if (error) throw error;
     return data;
   }
+
+  // ---------------------------------------------------------------------------
+  // MISSIONS
+  // ---------------------------------------------------------------------------
+
+  async getMission(missionId: string) {
+    const { data, error } = await this.supabase
+      .from('missions')
+      .select('*')
+      .eq('id', missionId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getMissions(filters?: { status?: string; workerId?: string }) {
+    let query = this.supabase
+      .from('missions')
+      .select('*')
+      .order('appointment_time', { ascending: true });
+
+    if (filters?.status) {
+      const statuses = filters.status.split(',').map((s) => s.trim());
+      query = query.in('status', statuses);
+    }
+
+    if (filters?.workerId) {
+      query = query.contains('assigned_workers', [filters.workerId]);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }
+
+  async createMission(missionData: any) {
+    const { data, error } = await this.supabase
+      .from('missions')
+      .insert(missionData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateMission(missionId: string, updates: any) {
+    const { data, error } = await this.supabase
+      .from('missions')
+      .update(updates)
+      .eq('id', missionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getMissionsByDateRange(start: string, end: string, workerId?: string) {
+    let query = this.supabase
+      .from('missions')
+      .select('*')
+      .gte('appointment_time', start)
+      .lte('appointment_time', end)
+      .not('status', 'eq', 'cancelled')
+      .order('appointment_time', { ascending: true });
+
+    if (workerId) {
+      query = query.contains('assigned_workers', [workerId]);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }
 }

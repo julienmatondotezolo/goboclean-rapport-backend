@@ -12,6 +12,18 @@ export interface SendReportEmailParams {
   address: string;
 }
 
+export interface MissionData {
+  id: string;
+  client_first_name: string;
+  client_last_name: string;
+  client_email?: string;
+  client_address: string;
+  client_phone: string;
+  appointment_time: string;
+  assigned_workers?: string[];
+  mission_subtypes?: string[];
+}
+
 @Injectable()
 export class EmailService {
   private transporter: Transporter;
@@ -163,6 +175,172 @@ export class EmailService {
 </html>
     `.trim();
   }
+
+  // ---------------------------------------------------------------------------
+  // Mission-related emails
+  // ---------------------------------------------------------------------------
+
+  async sendMissionAssignedEmail(mission: MissionData): Promise<void> {
+    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+    const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
+    const appointmentDate = new Date(mission.appointment_time).toLocaleString('fr-BE', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+    });
+
+    const mailOptions = {
+      from: this.configService.get<string>('SMTP_FROM'),
+      to, // In production, resolve worker emails from assigned_workers UUIDs
+      subject: `Nouvelle mission assignée — ${clientName}`,
+      html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
+.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
+.info{background:#f0fdf4;border-left:4px solid #064e3b;padding:12px;margin:16px 0}
+</style></head><body>
+<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Nouvelle mission</p></div>
+<div class="content">
+  <h2>Mission assignée</h2>
+  <p>Une nouvelle mission vous a été assignée :</p>
+  <div class="info">
+    <p><strong>👤 Client :</strong> ${clientName}</p>
+    <p><strong>📍 Adresse :</strong> ${mission.client_address}</p>
+    <p><strong>📅 Date :</strong> ${appointmentDate}</p>
+    <p><strong>📞 Téléphone :</strong> ${mission.client_phone}</p>
+  </div>
+  <p>Ouvrez l'application pour consulter les détails de la mission.</p>
+  <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
+</div>
+</body></html>`,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(`Mission assigned email sent for mission ${mission.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to send mission assigned email: ${error.message}`);
+    }
+  }
+
+  async sendPreReportEmail(mission: MissionData): Promise<void> {
+    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+    const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
+
+    const mailOptions = {
+      from: this.configService.get<string>('SMTP_FROM'),
+      to, // Admin email
+      subject: `Pré-rapport soumis — ${clientName} — ${mission.client_address}`,
+      html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
+.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
+.info{background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin:16px 0}
+</style></head><body>
+<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Pré-rapport</p></div>
+<div class="content">
+  <h2>Photos "avant" soumises</h2>
+  <p>Les photos avant-intervention ont été soumises pour la mission suivante :</p>
+  <div class="info">
+    <p><strong>👤 Client :</strong> ${clientName}</p>
+    <p><strong>📍 Adresse :</strong> ${mission.client_address}</p>
+    <p><strong>⏱️ Timer :</strong> 10 minutes de travail minimum démarré</p>
+  </div>
+  <p>Ouvrez l'application pour consulter le pré-rapport.</p>
+  <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
+</div>
+</body></html>`,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(`Pre-report email sent for mission ${mission.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to send pre-report email: ${error.message}`);
+    }
+  }
+
+  async sendMissionCompletedEmail(mission: MissionData): Promise<void> {
+    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+    const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
+
+    const mailOptions = {
+      from: this.configService.get<string>('SMTP_FROM'),
+      to, // Admin email; in production also send to client + worker
+      subject: `Mission terminée — ${clientName} — ${mission.client_address}`,
+      html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
+.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
+.info{background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin:16px 0}
+</style></head><body>
+<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Mission terminée ✅</p></div>
+<div class="content">
+  <h2>Mission complétée avec succès</h2>
+  <p>La mission suivante a été terminée :</p>
+  <div class="info">
+    <p><strong>👤 Client :</strong> ${clientName}</p>
+    <p><strong>📍 Adresse :</strong> ${mission.client_address}</p>
+    <p><strong>✅ Statut :</strong> Terminée</p>
+  </div>
+  <p>Le rapport final est disponible dans l'application. Un PDF sera envoyé au client.</p>
+  <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
+</div>
+</body></html>`,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(`Mission completed email sent for mission ${mission.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to send mission completed email: ${error.message}`);
+    }
+  }
+
+  async sendMissionCancelledEmail(mission: MissionData): Promise<void> {
+    const to = this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be';
+    const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
+
+    const mailOptions = {
+      from: this.configService.get<string>('SMTP_FROM'),
+      to,
+      subject: `Mission annulée — ${clientName} — ${mission.client_address}`,
+      html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
+.header{background:#991b1b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
+.info{background:#fef2f2;border-left:4px solid #dc2626;padding:12px;margin:16px 0}
+</style></head><body>
+<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Mission annulée</p></div>
+<div class="content">
+  <h2>Mission annulée</h2>
+  <p>La mission suivante a été annulée :</p>
+  <div class="info">
+    <p><strong>👤 Client :</strong> ${clientName}</p>
+    <p><strong>📍 Adresse :</strong> ${mission.client_address}</p>
+  </div>
+  <p>Contactez l'administrateur pour plus d'informations.</p>
+  <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
+</div>
+</body></html>`,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.log(`Mission cancelled email sent for mission ${mission.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to send mission cancelled email: ${error.message}`);
+    }
+  }
+
+  private logger = { log: console.log, error: console.error };
 
   async testConnection(): Promise<boolean> {
     try {

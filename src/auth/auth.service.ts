@@ -208,4 +208,66 @@ export class AuthService {
       throw new BadRequestException(`Failed to update profile picture: ${error.message}`);
     }
   }
+
+  async updatePreferences(
+    userId: string,
+    preferences: {
+      language?: 'en' | 'fr' | 'nl';
+      push_notifications_enabled?: boolean;
+      stay_connected?: boolean;
+    },
+  ) {
+    const supabase = this.supabaseService.getClient();
+
+    try {
+      // Build update object with only provided fields
+      const updateData: any = {};
+      
+      if (preferences.language !== undefined) {
+        if (!['en', 'fr', 'nl'].includes(preferences.language)) {
+          throw new BadRequestException('Invalid language. Must be en, fr, or nl');
+        }
+        updateData.language = preferences.language;
+      }
+      
+      if (preferences.push_notifications_enabled !== undefined) {
+        updateData.push_notifications_enabled = preferences.push_notifications_enabled;
+      }
+      
+      if (preferences.stay_connected !== undefined) {
+        updateData.stay_connected = preferences.stay_connected;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        throw new BadRequestException('No preferences provided to update');
+      }
+
+      // Update user preferences
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new BadRequestException(`Failed to update preferences: ${updateError.message}`);
+      }
+
+      return {
+        success: true,
+        message: 'Preferences updated successfully',
+        preferences: {
+          language: updatedUser.language,
+          push_notifications_enabled: updatedUser.push_notifications_enabled,
+          stay_connected: updatedUser.stay_connected,
+        },
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Failed to update preferences: ${error.message}`);
+    }
+  }
 }

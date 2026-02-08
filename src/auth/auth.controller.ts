@@ -128,4 +128,20 @@ export class AuthController {
 
     return this.authService.updateProfilePicture(user.id, profilePicture);
   }
+
+  @Put('preferences')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user preferences' })
+  async updatePreferences(
+    @CurrentUser() user: any,
+    @Body()
+    preferences: {
+      language?: 'en' | 'fr' | 'nl';
+      push_notifications_enabled?: boolean;
+      stay_connected?: boolean;
+    },
+  ) {
+    return this.authService.updatePreferences(user.id, preferences);
+  }
 }

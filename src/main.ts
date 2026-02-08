@@ -1,10 +1,16 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { CustomLogger } from './common/logger.service';
+import { AllExceptionsFilter } from './common/http-exception.filter';
+import { LoggingInterceptor } from './common/logging.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const customLogger = new CustomLogger();
+  const app = await NestFactory.create(AppModule, {
+    logger: customLogger,
+  });
 
   // Enable CORS
   app.enableCors({
@@ -14,6 +20,12 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     exposedHeaders: ['Authorization'],
   });
+
+  // Global exception filter
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Global logging interceptor
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -37,8 +49,14 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 Swagger docs available at: http://localhost:${port}/api`);
+  
+  const logger = new Logger('Bootstrap');
+  logger.log('='.repeat(60));
+  logger.log('🚀 Application is running on: http://localhost:' + port);
+  logger.log('📚 Swagger docs available at: http://localhost:' + port + '/api');
+  logger.log('🌍 CORS enabled for: ' + (process.env.FRONTEND_URL || 'http://localhost:3000'));
+  logger.log('📊 Environment: ' + (process.env.NODE_ENV || 'development'));
+  logger.log('='.repeat(60));
 }
 
 bootstrap();

@@ -36,3 +36,5 @@ coverage/
 .cache/
 .eslintcache
 package-lock.json
+run-migration.mjs
+test-api.sh

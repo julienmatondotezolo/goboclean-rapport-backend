@@ -77,4 +77,28 @@ export class NotificationsController {
   ) {
     return this.notificationsService.markAsRead(user.id, id);
   }
+
+  // -------------------------------------------------------------------------
+  // DELETE /notifications/:id — Delete a single notification
+  // -------------------------------------------------------------------------
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a notification' })
+  @ApiParam({ name: 'id', description: 'Notification UUID' })
+  @ApiResponse({ status: 200, description: 'Notification deleted' })
+  async deleteNotification(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationsService.deleteNotification(user.id, id);
+  }
+
+  // -------------------------------------------------------------------------
+  // DELETE /notifications — Clear all notifications for user
+  // -------------------------------------------------------------------------
+  @Delete()
+  @ApiOperation({ summary: 'Clear all notifications' })
+  @ApiResponse({ status: 200, description: 'All notifications cleared' })
+  async clearAll(@CurrentUser() user: any) {
+    return this.notificationsService.clearAllNotifications(user.id);
+  }
 }

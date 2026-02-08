@@ -8,12 +8,27 @@ import {
   IsNumber,
   IsInt,
   IsObject,
+  IsUUID,
+  IsIn,
   Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { MissionType, MissionSubtype } from './create-mission.dto';
 
 export class UpdateMissionDto {
+  @ApiPropertyOptional({
+    description: 'Mission status',
+    enum: ['assigned', 'in_progress', 'waiting_completion', 'completed', 'cancelled'],
+  })
+  @IsOptional()
+  @IsIn(['assigned', 'in_progress', 'waiting_completion', 'completed', 'cancelled'])
+  status?: string;
+
+  @ApiPropertyOptional({ description: 'Assigned worker UUIDs', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  assigned_workers?: string[];
   @ApiPropertyOptional({ description: 'Client first name' })
   @IsOptional()
   @IsString()

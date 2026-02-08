@@ -139,15 +139,20 @@ export class MissionsService {
     // Verify mission exists
     await this.getMissionRaw(missionId);
 
-    // Strip status field to prevent bypassing state machine transitions
-    const { status, ...safeDto } = dto as any;
-    if (status !== undefined) {
-      this.logger.warn(`Stripped 'status' field from updateMission PATCH for mission ${missionId}. Use dedicated state transition endpoints instead.`);
+    const updateData: Record<string, any> = { ...dto };
+
+    // If status is being changed, add relevant timestamps
+    if (dto.status === 'cancelled') {
+      updateData.cancelled_at = new Date().toISOString();
+    } else if (dto.status === 'completed') {
+      updateData.completed_at = new Date().toISOString();
+    } else if (dto.status === 'in_progress' && !updateData.started_at) {
+      updateData.started_at = new Date().toISOString();
     }
 
     const { data, error } = await supabase
       .from('missions')
-      .update(safeDto)
+      .update(updateData)
       .eq('id', missionId)
       .select()
       .single();

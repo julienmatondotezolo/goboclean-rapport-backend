@@ -136,6 +136,46 @@ export class NotificationsService {
   }
 
   // ---------------------------------------------------------------------------
+  // SOFT DELETE NOTIFICATION
+  // ---------------------------------------------------------------------------
+  async deleteNotification(userId: string, notificationId: string) {
+    const supabase = this.supabaseService.getClient();
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new NotFoundException(`Notification ${notificationId} not found`);
+    }
+
+    return { success: true };
+  }
+
+  // ---------------------------------------------------------------------------
+  // CLEAR ALL NOTIFICATIONS
+  // ---------------------------------------------------------------------------
+  async clearAllNotifications(userId: string) {
+    const supabase = this.supabaseService.getClient();
+
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to clear notifications: ${error.message}`);
+      throw error;
+    }
+
+    return { success: true, cleared: true };
+  }
+
+  // ---------------------------------------------------------------------------
   // CREATE IN-APP + SEND PUSH
   // ---------------------------------------------------------------------------
   async createAndSendNotification(

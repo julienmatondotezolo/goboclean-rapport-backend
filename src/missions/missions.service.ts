@@ -103,7 +103,8 @@ export class MissionsService {
       throw new BadRequestException(`Failed to fetch missions: ${error.message}`);
     }
 
-    return data;
+    // Enrich with worker details
+    return this.enrichMissionsWithWorkers(data);
   }
 
   // ---------------------------------------------------------------------------
@@ -127,7 +128,42 @@ export class MissionsService {
       throw new ForbiddenException('You are not assigned to this mission');
     }
 
-    return data;
+    // Enrich with worker details
+    const [enriched] = await this.enrichMissionsWithWorkers([data]);
+    return enriched;
+  }
+
+  // ---------------------------------------------------------------------------
+  // ENRICH MISSIONS WITH WORKER DETAILS
+  // ---------------------------------------------------------------------------
+  private async enrichMissionsWithWorkers(missions: any[]): Promise<any[]> {
+    if (!missions || missions.length === 0) return missions;
+
+    // Collect all unique worker IDs
+    const allWorkerIds = new Set<string>();
+    missions.forEach((m) => {
+      if (m.assigned_workers?.length) {
+        m.assigned_workers.forEach((id: string) => allWorkerIds.add(id));
+      }
+    });
+
+    if (allWorkerIds.size === 0) return missions;
+
+    const supabase = this.supabaseService.getClient();
+    const { data: workers } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, role, profile_picture_url')
+      .in('id', Array.from(allWorkerIds));
+
+    const workerMap = new Map<string, any>();
+    (workers || []).forEach((w) => workerMap.set(w.id, w));
+
+    return missions.map((m) => ({
+      ...m,
+      assigned_workers_details: (m.assigned_workers || [])
+        .map((id: string) => workerMap.get(id))
+        .filter(Boolean),
+    }));
   }
 
   // ---------------------------------------------------------------------------
@@ -597,7 +633,7 @@ export class MissionsService {
       throw new BadRequestException(`Failed to fetch calendar missions: ${error.message}`);
     }
 
-    return data;
+    return this.enrichMissionsWithWorkers(data);
   }
 
   // ---------------------------------------------------------------------------

@@ -328,6 +328,9 @@ export class MissionsService {
       throw new BadRequestException(`Failed to start mission: ${error.message}`);
     }
 
+    // Notify admins that mission has started
+    await this.notifyAdminsMissionStarted(data, userId);
+
     this.logger.log(`Mission ${missionId} started by worker ${userId}`);
     return data;
   }
@@ -735,6 +738,39 @@ export class MissionsService {
   // ---------------------------------------------------------------------------
   // NOTIFICATION HELPERS
   // ---------------------------------------------------------------------------
+
+  private async notifyAdminsMissionStarted(mission: any, workerId: string) {
+    const supabase = this.supabaseService.getClient();
+
+    // Resolve worker name
+    const { data: worker } = await supabase
+      .from('users')
+      .select('first_name, last_name')
+      .eq('id', workerId)
+      .single();
+
+    const workerName = worker
+      ? `${worker.first_name} ${worker.last_name}`
+      : 'A worker';
+
+    // Notify all admins
+    const { data: admins } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'admin');
+
+    if (admins) {
+      for (const admin of admins) {
+        await this.notificationsService.createAndSendNotification(
+          admin.id,
+          'Mission In Progress',
+          `${workerName} has started the mission at ${mission.client_address}.`,
+          'mission_started',
+          mission.id,
+        );
+      }
+    }
+  }
 
   private async notifyWorkersAssigned(mission: any) {
     if (!mission.assigned_workers?.length) return;

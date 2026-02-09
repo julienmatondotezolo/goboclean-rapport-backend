@@ -4,10 +4,13 @@ import {
   ExecutionContext,
   CallHandler,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
+import { MonitoringService } from '../../monitoring/monitoring.service';
 
 interface LogContext {
   requestId: string;
@@ -28,6 +31,11 @@ interface LogContext {
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('API');
+
+  constructor(
+    @Inject(forwardRef(() => MonitoringService))
+    private readonly monitoringService: MonitoringService,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -63,6 +71,22 @@ export class LoggingInterceptor implements NestInterceptor {
       action: 'request_start',
     });
 
+    // Track user session if authenticated
+    if (user) {
+      this.monitoringService.trackUserSession(
+        user.id,
+        requestId,
+        {
+          role: user.role,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+        },
+        logContext.ip,
+        logContext.userAgent
+      );
+    }
+
     return next.handle().pipe(
       tap((responseBody) => {
         const responseTime = Date.now() - startTime;
@@ -75,6 +99,19 @@ export class LoggingInterceptor implements NestInterceptor {
           responseTime,
           responseBody: this.sanitizeResponseBody(responseBody),
         });
+
+        // Track API call in monitoring
+        if (user) {
+          this.monitoringService.trackApiCall(
+            user.id,
+            request.method,
+            request.url,
+            response.statusCode,
+            responseTime,
+            undefined,
+            { requestId }
+          );
+        }
       }),
       catchError((error) => {
         const responseTime = Date.now() - startTime;
@@ -89,6 +126,19 @@ export class LoggingInterceptor implements NestInterceptor {
           errorName: error.name,
           errorStack: error.stack,
         });
+
+        // Track API error in monitoring
+        if (user) {
+          this.monitoringService.trackApiCall(
+            user.id,
+            request.method,
+            request.url,
+            error.status || 500,
+            responseTime,
+            error.message,
+            { requestId, errorName: error.name }
+          );
+        }
 
         return throwError(() => error);
       }),

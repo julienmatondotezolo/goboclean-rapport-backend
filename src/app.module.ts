@@ -9,6 +9,7 @@ import { EmailModule } from './email/email.module';
 import { AdminModule } from './admin/admin.module';
 import { MissionsModule } from './missions/missions.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ServiceLoggerService } from './common/services/service-logger.service';
 
@@ -25,6 +26,7 @@ import { ServiceLoggerService } from './common/services/service-logger.service';
     AdminModule,
     MissionsModule,
     NotificationsModule,
+    MonitoringModule,
   ],
   providers: [
     {

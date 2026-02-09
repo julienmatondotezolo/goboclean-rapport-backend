@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { MonitoringService } from '../../monitoring/monitoring.service';
 
 interface CrudContext {
   service: string;
@@ -18,6 +19,11 @@ interface CrudContext {
 @Injectable()
 export class ServiceLoggerService {
   private readonly logger = new Logger('CRUD');
+
+  constructor(
+    @Inject(forwardRef(() => MonitoringService))
+    private readonly monitoringService: MonitoringService,
+  ) {}
 
   private sanitizeData(data: any): any {
     if (!data) return data;
@@ -86,6 +92,23 @@ export class ServiceLoggerService {
       this.logger.log(
         `${emoji[context.operation]} ${context.service}.${context.operation} ${context.entity}${context.entityId ? ` (${context.entityId})` : ''} ${context.duration ? `(${context.duration}ms)` : ''}`,
         logData
+      );
+    }
+
+    // Track CRUD operation in monitoring
+    if (context.userId && this.monitoringService) {
+      this.monitoringService.trackCrudOperation(
+        context.userId,
+        context.operation,
+        context.entity,
+        context.entityId?.toString(),
+        context.duration,
+        context.error?.message,
+        {
+          service: context.service,
+          resultCount: context.resultCount,
+          filters: context.filters,
+        }
       );
     }
   }

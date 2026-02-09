@@ -12,6 +12,27 @@ import { Request, Response } from 'express';
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('ExceptionFilter');
 
+  // Common security probe paths to handle silently
+  private readonly SECURITY_PROBES = [
+    '/.env',
+    '/.git',
+    '/wp-admin',
+    '/admin',
+    '/phpmyadmin',
+    '/wp-login.php',
+    '/wp-config.php',
+    '/.htaccess',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/.well-known',
+    '/favicon.ico',
+    '/apple-touch-icon',
+  ];
+
+  private isSecurityProbe(url: string): boolean {
+    return this.SECURITY_PROBES.some(probe => url.startsWith(probe));
+  }
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -37,16 +58,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error = exception.name;
     }
 
-    // Log the error with details
-    this.logger.error(
-      `❌ ${request.method} ${request.url} - Status: ${status}`,
-      exception instanceof Error ? exception.stack : undefined,
-    );
-    
-    this.logger.error(`📋 Error Details: ${message}`);
-    
-    if (request.body && Object.keys(request.body).length > 0) {
-      this.logger.error(`📦 Request Body: ${JSON.stringify(request.body, null, 2)}`);
+    // Don't log security probes or favicon requests
+    const shouldLog = !this.isSecurityProbe(request.url) || status !== HttpStatus.NOT_FOUND;
+
+    if (shouldLog) {
+      // Log the error with details
+      this.logger.error(
+        `❌ ${request.method} ${request.url} - Status: ${status}`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
+      
+      this.logger.error(`📋 Error Details: ${message}`);
+      
+      if (request.body && Object.keys(request.body).length > 0) {
+        this.logger.error(`📦 Request Body: ${JSON.stringify(request.body, null, 2)}`);
+      }
     }
 
     // Send response

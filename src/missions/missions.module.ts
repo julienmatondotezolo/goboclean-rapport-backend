@@ -5,10 +5,11 @@ import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
 import { ReportsModule } from '../reports/reports.module';
+import { MonitoringModule } from '../monitoring/monitoring.module';
 import { ServiceLoggerService } from '../common/services/service-logger.service';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, EmailModule, ReportsModule],
+  imports: [AuthModule, NotificationsModule, EmailModule, ReportsModule, MonitoringModule],
   controllers: [MissionsController],
   providers: [MissionsService, ServiceLoggerService],
   exports: [MissionsService],

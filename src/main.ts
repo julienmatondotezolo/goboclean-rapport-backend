@@ -36,6 +36,9 @@ async function bootstrap() {
     }),
   );
 
+  // Set global API prefix
+  app.setGlobalPrefix('api');
+
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('RoofReport API')

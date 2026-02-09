@@ -2,12 +2,12 @@ import {
   Controller, 
   Get, 
   Post, 
-  Body, 
   UseGuards, 
   UseInterceptors, 
   UploadedFile,
   BadRequestException,
-  Put 
+  Put,
+  Body 
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
@@ -20,33 +20,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nes
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('signup')
-  @ApiOperation({ summary: 'Create a new user account' })
-  async signup(
-    @Body()
-    signupDto: {
-      email: string;
-      password: string;
-      first_name: string;
-      last_name: string;
-      phone?: string;
-      role?: 'worker' | 'admin';
-    },
-  ) {
-    return this.authService.signup(signupDto);
-  }
-
-  @Post('login')
-  @ApiOperation({ summary: 'Login to user account' })
-  async login(
-    @Body()
-    loginDto: {
-      email: string;
-      password: string;
-    },
-  ) {
-    return this.authService.login(loginDto);
-  }
+  // ❌ REMOVED: signup, login, refresh endpoints
+  // ✅ These are handled directly by Supabase on frontend
 
   @Get('me')
   @UseGuards(AuthGuard)
@@ -54,12 +29,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   async getCurrentUser(@CurrentUser() user: any) {
     return this.authService.getUserProfile(user.id);
-  }
-
-  @Post('refresh')
-  @ApiOperation({ summary: 'Refresh access token' })
-  async refreshToken(@Body('refresh_token') refreshToken: string) {
-    return this.authService.refreshToken(refreshToken);
   }
 
   @Post('onboarding')
@@ -102,14 +71,6 @@ export class AuthController {
       lastName.trim(),
       profilePicture,
     );
-  }
-
-  @Get('profile')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user profile with profile picture' })
-  async getProfile(@CurrentUser() user: any) {
-    return this.authService.getUserProfile(user.id);
   }
 
   @Put('profile/picture')

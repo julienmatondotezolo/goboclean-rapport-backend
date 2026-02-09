@@ -5,65 +5,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class AuthService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async signup(signupData: {
-    email: string;
-    password: string;
-    first_name: string;
-    last_name: string;
-    phone?: string;
-    role?: 'worker' | 'admin';
-  }) {
-    const supabase = this.supabaseService.getClient();
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: signupData.email,
-      password: signupData.password,
-      options: {
-        data: {
-          first_name: signupData.first_name,
-          last_name: signupData.last_name,
-          phone: signupData.phone,
-          role: signupData.role || 'worker',
-        },
-      },
-    });
-
-    if (authError) {
-      throw new UnauthorizedException(authError.message);
-    }
-
-    return {
-      user: authData.user,
-      session: authData.session,
-    };
-  }
-
-  async login(loginData: { email: string; password: string }) {
-    const supabase = this.supabaseService.getClient();
-
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email: loginData.email,
-      password: loginData.password,
-    });
-
-    if (error) {
-      throw new BadRequestException(`Login failed: ${error.message}`);
-    }
-
-    // Log user activity
-    await supabase.from('user_activity').insert({
-      user_id: authData.user.id,
-      activity_type: 'login',
-      user_agent: 'api-login',
-      device_info: { method: 'password' },
-    });
-
-    return {
-      user: authData.user,
-      session: authData.session,
-    };
-  }
+  // ❌ REMOVED: signup, login, refreshToken methods
+  // ✅ These are handled directly by Supabase on frontend
 
   async getUserProfile(userId: string) {
     const supabase = this.supabaseService.getClient();
@@ -79,23 +22,6 @@ export class AuthService {
     }
 
     return data;
-  }
-
-  async refreshToken(refreshToken: string) {
-    const supabase = this.supabaseService.getClient();
-
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: refreshToken,
-    });
-
-    if (error) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    return {
-      access_token: data.session?.access_token,
-      refresh_token: data.session?.refresh_token,
-    };
   }
 
   async completeOnboarding(

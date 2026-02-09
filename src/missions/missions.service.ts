@@ -8,6 +8,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
+import { ServiceLoggerService } from '../common/services/service-logger.service';
 import { ReportsService } from '../reports/reports.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
@@ -23,114 +24,168 @@ export class MissionsService {
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
     private readonly reportsService: ReportsService,
+    private readonly serviceLogger: ServiceLoggerService,
   ) {}
 
   // ---------------------------------------------------------------------------
   // CREATE
   // ---------------------------------------------------------------------------
   async createMission(dto: CreateMissionDto, createdByUserId: string) {
-    const supabase = this.supabaseService.getClient();
+    const timer = this.serviceLogger.startTimer();
+    const user = { id: createdByUserId, role: 'admin' }; // Creator is typically admin
 
-    const insertData: any = {
-      created_by: createdByUserId,
-      client_first_name: dto.client_first_name,
-      client_last_name: dto.client_last_name,
-      client_phone: dto.client_phone,
-      client_email: dto.client_email || null,
-      client_address: dto.client_address,
-      client_latitude: dto.client_latitude || null,
-      client_longitude: dto.client_longitude || null,
-      appointment_time: dto.appointment_time,
-      mission_type: dto.mission_type || 'roof',
-      mission_subtypes: dto.mission_subtypes,
-      surface_area: dto.surface_area || null,
-      facade_count: dto.facade_count || 1,
-      additional_info: dto.additional_info || null,
-      features: dto.features || {},
-      status: 'assigned',
-    };
+    try {
+      const supabase = this.supabaseService.getClient();
 
-    // Attach assigned workers if provided
-    if (dto.assigned_workers && dto.assigned_workers.length > 0) {
-      insertData.assigned_workers = dto.assigned_workers;
+      const insertData: any = {
+        created_by: createdByUserId,
+        client_first_name: dto.client_first_name,
+        client_last_name: dto.client_last_name,
+        client_phone: dto.client_phone,
+        client_email: dto.client_email || null,
+        client_address: dto.client_address,
+        client_latitude: dto.client_latitude || null,
+        client_longitude: dto.client_longitude || null,
+        appointment_time: dto.appointment_time,
+        mission_type: dto.mission_type || 'roof',
+        mission_subtypes: dto.mission_subtypes,
+        surface_area: dto.surface_area || null,
+        facade_count: dto.facade_count || 1,
+        additional_info: dto.additional_info || null,
+        features: dto.features || {},
+        status: 'assigned',
+      };
+
+      // Attach assigned workers if provided
+      if (dto.assigned_workers && dto.assigned_workers.length > 0) {
+        insertData.assigned_workers = dto.assigned_workers;
+      }
+
+      const { data, error } = await supabase
+        .from('missions')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error(`Failed to create mission: ${error.message}`);
+        const err = new BadRequestException(`Failed to create mission: ${error.message}`);
+        this.serviceLogger.logCreate('MissionsService', 'mission', dto, null, user, timer(), err);
+        throw err;
+      }
+
+      // Send notifications to assigned workers
+      if (data.status === 'assigned' && data.assigned_workers?.length > 0) {
+        await this.notifyWorkersAssigned(data);
+      }
+
+      this.logger.log(`Mission ${data.id} created by ${createdByUserId}`);
+      
+      // Log successful creation
+      this.serviceLogger.logCreate('MissionsService', 'mission', dto, data, user, timer());
+      
+      return data;
+    } catch (error) {
+      // Log any unexpected errors
+      if (!(error instanceof BadRequestException)) {
+        this.serviceLogger.logCreate('MissionsService', 'mission', dto, null, user, timer(), error as Error);
+      }
+      throw error;
     }
-
-    const { data, error } = await supabase
-      .from('missions')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) {
-      this.logger.error(`Failed to create mission: ${error.message}`);
-      throw new BadRequestException(`Failed to create mission: ${error.message}`);
-    }
-
-    // Send notifications to assigned workers
-    if (data.status === 'assigned' && data.assigned_workers?.length > 0) {
-      await this.notifyWorkersAssigned(data);
-    }
-
-    this.logger.log(`Mission ${data.id} created by ${createdByUserId}`);
-    return data;
   }
 
   // ---------------------------------------------------------------------------
   // LIST
   // ---------------------------------------------------------------------------
   async getMissions(user: { id: string; role: string }, status?: string) {
-    const supabase = this.supabaseService.getClient();
+    const timer = this.serviceLogger.startTimer();
+    const filters = { status, userRole: user.role };
 
-    let query = supabase
-      .from('missions')
-      .select('*')
-      .order('appointment_time', { ascending: true });
+    try {
+      const supabase = this.supabaseService.getClient();
 
-    // Workers only see their own missions
-    if (user.role !== 'admin') {
-      query = query.contains('assigned_workers', [user.id]);
+      let query = supabase
+        .from('missions')
+        .select('*')
+        .order('appointment_time', { ascending: true });
+
+      // Workers only see their own missions
+      if (user.role !== 'admin') {
+        query = query.contains('assigned_workers', [user.id]);
+      }
+
+      if (status) {
+        const statuses = status.split(',').map((s) => s.trim());
+        query = query.in('status', statuses);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        this.logger.error(`Failed to fetch missions: ${error.message}`);
+        const err = new BadRequestException(`Failed to fetch missions: ${error.message}`);
+        this.serviceLogger.logList('MissionsService', 'missions', filters, 0, user, timer(), err);
+        throw err;
+      }
+
+      // Enrich with worker details
+      const enrichedData = await this.enrichMissionsWithWorkers(data);
+      
+      // Log successful operation
+      this.serviceLogger.logList('MissionsService', 'missions', filters, enrichedData.length, user, timer());
+      
+      return enrichedData;
+    } catch (error) {
+      // Log any unexpected errors
+      if (!(error instanceof BadRequestException)) {
+        this.serviceLogger.logList('MissionsService', 'missions', filters, 0, user, timer(), error as Error);
+      }
+      throw error;
     }
-
-    if (status) {
-      const statuses = status.split(',').map((s) => s.trim());
-      query = query.in('status', statuses);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      this.logger.error(`Failed to fetch missions: ${error.message}`);
-      throw new BadRequestException(`Failed to fetch missions: ${error.message}`);
-    }
-
-    // Enrich with worker details
-    return this.enrichMissionsWithWorkers(data);
   }
 
   // ---------------------------------------------------------------------------
   // GET BY ID
   // ---------------------------------------------------------------------------
   async getMission(missionId: string, user: { id: string; role: string }) {
-    const supabase = this.supabaseService.getClient();
+    const timer = this.serviceLogger.startTimer();
 
-    const { data, error } = await supabase
-      .from('missions')
-      .select('*')
-      .eq('id', missionId)
-      .single();
+    try {
+      const supabase = this.supabaseService.getClient();
 
-    if (error || !data) {
-      throw new NotFoundException(`Mission ${missionId} not found`);
+      const { data, error } = await supabase
+        .from('missions')
+        .select('*')
+        .eq('id', missionId)
+        .single();
+
+      if (error || !data) {
+        const err = new NotFoundException(`Mission ${missionId} not found`);
+        this.serviceLogger.logRead('MissionsService', 'mission', missionId, null, user, timer(), err);
+        throw err;
+      }
+
+      // Workers can only view their own assigned missions
+      if (user.role !== 'admin' && !data.assigned_workers?.includes(user.id)) {
+        const err = new ForbiddenException('You are not assigned to this mission');
+        this.serviceLogger.logRead('MissionsService', 'mission', missionId, null, user, timer(), err);
+        throw err;
+      }
+
+      // Enrich with worker details
+      const [enriched] = await this.enrichMissionsWithWorkers([data]);
+      
+      // Log successful read
+      this.serviceLogger.logRead('MissionsService', 'mission', missionId, enriched, user, timer());
+      
+      return enriched;
+    } catch (error) {
+      // Log any unexpected errors
+      if (!(error instanceof NotFoundException) && !(error instanceof ForbiddenException)) {
+        this.serviceLogger.logRead('MissionsService', 'mission', missionId, null, user, timer(), error as Error);
+      }
+      throw error;
     }
-
-    // Workers can only view their own assigned missions
-    if (user.role !== 'admin' && !data.assigned_workers?.includes(user.id)) {
-      throw new ForbiddenException('You are not assigned to this mission');
-    }
-
-    // Enrich with worker details
-    const [enriched] = await this.enrichMissionsWithWorkers([data]);
-    return enriched;
   }
 
   // ---------------------------------------------------------------------------

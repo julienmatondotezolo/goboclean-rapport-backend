@@ -139,6 +139,8 @@ export class MissionsService {
   private async enrichMissionsWithWorkers(missions: any[]): Promise<any[]> {
     if (!missions || missions.length === 0) return missions;
 
+    const supabase = this.supabaseService.getClient();
+
     // Collect all unique worker IDs
     const allWorkerIds = new Set<string>();
     missions.forEach((m) => {
@@ -147,23 +149,50 @@ export class MissionsService {
       }
     });
 
-    if (allWorkerIds.size === 0) return missions;
+    // Fetch worker details
+    let workerMap = new Map<string, any>();
+    if (allWorkerIds.size > 0) {
+      const { data: workers } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, role, profile_picture_url')
+        .in('id', Array.from(allWorkerIds));
 
-    const supabase = this.supabaseService.getClient();
-    const { data: workers } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, role, profile_picture_url')
-      .in('id', Array.from(allWorkerIds));
+      (workers || []).forEach((w) => workerMap.set(w.id, w));
+    }
 
-    const workerMap = new Map<string, any>();
-    (workers || []).forEach((w) => workerMap.set(w.id, w));
+    // Fetch photos for all missions
+    const missionIds = missions.map(m => m.id);
+    const { data: photos } = await supabase
+      .from('mission_photos')
+      .select('mission_id, storage_path, type')
+      .in('mission_id', missionIds);
 
-    return missions.map((m) => ({
-      ...m,
-      assigned_workers_details: (m.assigned_workers || [])
-        .map((id: string) => workerMap.get(id))
-        .filter(Boolean),
-    }));
+    // Group photos by mission and type
+    const photosMap = new Map<string, { before: string[], after: string[] }>();
+    (photos || []).forEach((photo) => {
+      if (!photosMap.has(photo.mission_id)) {
+        photosMap.set(photo.mission_id, { before: [], after: [] });
+      }
+      const photoGroup = photosMap.get(photo.mission_id)!;
+      if (photo.type === 'before') {
+        photoGroup.before.push(photo.storage_path);
+      } else if (photo.type === 'after') {
+        photoGroup.after.push(photo.storage_path);
+      }
+    });
+
+    return missions.map((mission) => {
+      const missionPhotos = photosMap.get(mission.id) || { before: [], after: [] };
+      
+      return {
+        ...mission,
+        assigned_workers_details: (mission.assigned_workers || [])
+          .map((id: string) => workerMap.get(id))
+          .filter(Boolean),
+        before_pictures: missionPhotos.before,
+        after_pictures: missionPhotos.after,
+      };
+    });
   }
 
   // ---------------------------------------------------------------------------

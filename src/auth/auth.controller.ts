@@ -36,6 +36,18 @@ export class AuthController {
     return this.authService.signup(signupDto);
   }
 
+  @Post('login')
+  @ApiOperation({ summary: 'Login to user account' })
+  async login(
+    @Body()
+    loginDto: {
+      email: string;
+      password: string;
+    },
+  ) {
+    return this.authService.login(loginDto);
+  }
+
   @Get('me')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()

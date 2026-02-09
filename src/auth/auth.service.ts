@@ -39,6 +39,32 @@ export class AuthService {
     };
   }
 
+  async login(loginData: { email: string; password: string }) {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
+      email: loginData.email,
+      password: loginData.password,
+    });
+
+    if (error) {
+      throw new BadRequestException(`Login failed: ${error.message}`);
+    }
+
+    // Log user activity
+    await supabase.from('user_activity').insert({
+      user_id: authData.user.id,
+      activity_type: 'login',
+      user_agent: 'api-login',
+      device_info: { method: 'password' },
+    });
+
+    return {
+      user: authData.user,
+      session: authData.session,
+    };
+  }
+
   async getUserProfile(userId: string) {
     const supabase = this.supabaseService.getClient();
 

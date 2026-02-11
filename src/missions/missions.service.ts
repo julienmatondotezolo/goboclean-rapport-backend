@@ -476,7 +476,7 @@ export class MissionsService {
   }
 
   // ---------------------------------------------------------------------------
-  // BEFORE PICTURES — transitions to waiting_completion + starts 10-min timer
+  // BEFORE PICTURES — transitions to waiting_completion + starts completion timer
   // ---------------------------------------------------------------------------
   async submitBeforePictures(
     missionId: string,
@@ -526,9 +526,10 @@ export class MissionsService {
       }
     }
 
-    // Set the 10-minute timer
+    // Set the completion timer (configurable via env)
     const now = new Date();
-    const completionUnlockedAt = new Date(now.getTime() + 10 * 60 * 1000); // +10 minutes
+    const timerSeconds = parseInt(process.env.MISSION_COMPLETION_TIMER_SECONDS || '120', 10);
+    const completionUnlockedAt = new Date(now.getTime() + timerSeconds * 1000);
 
     const supabase = this.supabaseService.getClient();
 
@@ -633,7 +634,7 @@ export class MissionsService {
       );
     }
 
-    // Check 10-minute timer
+    // Check completion timer
     if (mission.completion_unlocked_at) {
       const unlockTime = new Date(mission.completion_unlocked_at);
       if (new Date() < unlockTime) {
@@ -986,7 +987,7 @@ export class MissionsService {
         await this.notificationsService.createAndSendNotification(
           admin.id,
           'Pre-Report Submitted',
-          `Before-pictures submitted for mission at ${mission.client_address}. 10-minute timer started.`,
+          `Before-pictures submitted for mission at ${mission.client_address}. Completion timer started.`,
           'pre_report',
           mission.id,
         );

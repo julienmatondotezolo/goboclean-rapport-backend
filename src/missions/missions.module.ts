@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MissionsController } from './missions.controller';
+import { MissionsTestController } from './missions-test.controller';
 import { MissionsService } from './missions.service';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -10,7 +11,7 @@ import { ServiceLoggerService } from '../common/services/service-logger.service'
 
 @Module({
   imports: [AuthModule, NotificationsModule, EmailModule, ReportsModule, MonitoringModule],
-  controllers: [MissionsController],
+  controllers: [MissionsController, MissionsTestController],
   providers: [MissionsService, ServiceLoggerService],
   exports: [MissionsService],
 })

@@ -219,15 +219,32 @@ export class MissionsService {
     const missionIds = missions.map(m => m.id);
     this.logger.log(`🔍 Fetching photos for ${missionIds.length} missions`);
     
-    // Get both pre-reports and final reports for these missions
-    const { data: reports } = await supabase
-      .from('reports')
-      .select(`
-        id,
-        status,
-        photos!inner(storage_path, type, order)
-      `)
-      .or(`id.in.(${missions.map(m => m.pre_report_id).filter(Boolean).join(',')}),id.in.(${missions.map(m => m.final_report_id).filter(Boolean).join(',')})`);
+    // Collect all report IDs from missions
+    const preReportIds = missions.map(m => m.pre_report_id).filter(Boolean);
+    const finalReportIds = missions.map(m => m.final_report_id).filter(Boolean);
+    const allReportIds = [...preReportIds, ...finalReportIds];
+    
+    this.logger.log(`📋 Found ${preReportIds.length} pre-reports and ${finalReportIds.length} final reports`);
+    
+    // Get photos for these reports
+    let reports: any[] = [];
+    if (allReportIds.length > 0) {
+      const { data: reportsData, error: reportsError } = await supabase
+        .from('reports')
+        .select(`
+          id,
+          status,
+          photos!inner(storage_path, type, order)
+        `)
+        .in('id', allReportIds);
+
+      if (reportsError) {
+        this.logger.error(`❌ Failed to fetch reports: ${reportsError.message}`);
+      } else {
+        reports = reportsData || [];
+        this.logger.log(`📊 Loaded ${reports.length} reports with photos`);
+      }
+    }
 
     // Create a map from mission to photos via report IDs
     const photosMap = new Map<string, { before: string[], after: string[] }>();
@@ -238,33 +255,42 @@ export class MissionsService {
     });
     
     // Map photos to missions through reports
-    missions.forEach(mission => {
+    await Promise.all(missions.map(async mission => {
       const photoGroup = photosMap.get(mission.id)!;
       
       // Get before photos from pre-report
       if (mission.pre_report_id) {
-        const preReport = (reports || []).find(r => r.id === mission.pre_report_id);
+        const preReport = reports.find(r => r.id === mission.pre_report_id);
         if (preReport?.photos) {
-          preReport.photos
+          const beforePhotoPromises = preReport.photos
             .filter((p: any) => p.type === 'before')
             .sort((a: any, b: any) => a.order - b.order)
-            .forEach((p: any) => photoGroup.before.push(p.storage_path));
+            .map(async (p: any) => await this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
+          
+          const beforePhotos = await Promise.all(beforePhotoPromises);
+          photoGroup.before.push(...beforePhotos);
+          this.logger.log(`📸 Mission ${mission.id}: Found ${beforePhotos.length} before photos`);
         }
       }
       
       // Get after photos from final report
       if (mission.final_report_id) {
-        const finalReport = (reports || []).find(r => r.id === mission.final_report_id);
+        const finalReport = reports.find(r => r.id === mission.final_report_id);
         if (finalReport?.photos) {
-          finalReport.photos
+          const afterPhotoPromises = finalReport.photos
             .filter((p: any) => p.type === 'after')
             .sort((a: any, b: any) => a.order - b.order)
-            .forEach((p: any) => photoGroup.after.push(p.storage_path));
+            .map(async (p: any) => await this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
+          
+          const afterPhotos = await Promise.all(afterPhotoPromises);
+          photoGroup.after.push(...afterPhotos);
+          this.logger.log(`📸 Mission ${mission.id}: Found ${afterPhotos.length} after photos`);
         }
       }
-    });
+    }));
     
-    this.logger.log(`📸 Found photos for ${Array.from(photosMap.values()).filter(p => p.before.length > 0 || p.after.length > 0).length} missions`);
+    const missionsWithPhotos = Array.from(photosMap.values()).filter(p => p.before.length > 0 || p.after.length > 0).length;
+    this.logger.log(`📸 Total missions with photos: ${missionsWithPhotos}/${missionIds.length}`);
 
     return missions.map((mission) => {
       const missionPhotos = photosMap.get(mission.id) || { before: [], after: [] };

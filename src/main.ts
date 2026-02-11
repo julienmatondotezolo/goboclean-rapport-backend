@@ -39,16 +39,62 @@ async function bootstrap() {
   // Set global API prefix
   app.setGlobalPrefix('api');
 
-  // Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('RoofReport API')
-    .setDescription('API for GoBo Clean RoofReport PWA')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  // Swagger documentation (development only)
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  if (isDevelopment) {
+    const config = new DocumentBuilder()
+      .setTitle('GoBo Clean API')
+      .setDescription(`
+# GoBo Clean RoofReport API
+
+Complete API for the GoBo Clean roof cleaning PWA application.
+
+## Authentication
+All endpoints require Bearer token authentication. Get a token by logging in via \`POST /api/auth/login\`.
+
+## Mission Workflow
+1. **Create Mission** - Admin creates mission and assigns workers
+2. **Start Mission** - Worker starts mission (status: assigned → in_progress)
+3. **Submit Before Pictures** - Worker uploads before photos (status: in_progress → waiting_completion)
+4. **Complete Mission** - Worker uploads after photos + signatures (status: waiting_completion → completed)
+
+## Photo Storage
+- Before/after pictures are stored in Supabase storage
+- Photos are linked to missions via pre_report_id and final_report_id
+- Mission responses include before_pictures and after_pictures arrays
+
+## Email System  
+- SMTP via Combell (info@goboclean.be)
+- Automatic notifications for mission events
+- PDF reports generated and emailed on completion
+      `)
+      .setVersion('1.0')
+      .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Enter your Bearer token',
+        in: 'header',
+      })
+      .addTag('Auth', 'Authentication endpoints')
+      .addTag('Missions', 'Mission management')
+      .addTag('Admin', 'Admin-only endpoints')
+      .addTag('Email', 'Email testing (admin only)')
+      .addTag('Reports', 'PDF report generation')
+      .addTag('Notifications', 'Push notifications')
+      .build();
+    
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'none',
+        filter: true,
+        showRequestDuration: true,
+      },
+    });
+  }
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
@@ -56,9 +102,15 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   logger.log('='.repeat(60));
   logger.log('🚀 Application is running on: http://localhost:' + port);
-  logger.log('📚 Swagger docs available at: http://localhost:' + port + '/api');
+  if (isDevelopment) {
+    logger.log('📚 Swagger docs available at: http://localhost:' + port + '/api');
+    logger.log('🧪 Admin test endpoints available for debugging');
+  } else {
+    logger.log('📚 Swagger disabled in production');
+  }
   logger.log('🌍 CORS enabled for: ' + (process.env.FRONTEND_URL || 'http://localhost:3000'));
   logger.log('📊 Environment: ' + (process.env.NODE_ENV || 'development'));
+  logger.log('📧 SMTP: ' + (process.env.SMTP_USER || 'not configured'));
   logger.log('='.repeat(60));
 }
 

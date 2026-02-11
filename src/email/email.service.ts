@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
@@ -26,18 +26,29 @@ export interface MissionData {
 
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
   private transporter: Transporter;
 
   constructor(private configService: ConfigService) {
+    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const smtpPort = this.configService.get<number>('SMTP_PORT');
+    const smtpUser = this.configService.get<string>('SMTP_USER');
+    const smtpPass = this.configService.get<string>('SMTP_PASSWORD');
+    
+    this.logger.log(`🔧 Initializing SMTP transport: ${smtpUser}@${smtpHost}:${smtpPort}`);
+    
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST'),
-      port: this.configService.get<number>('SMTP_PORT'),
-      secure: this.configService.get<number>('SMTP_PORT') === 465,
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
       auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASSWORD'),
+        user: smtpUser,
+        pass: smtpPass,
       },
     });
+    
+    // Test connection on startup
+    this.testConnection();
   }
 
   async sendReportEmail(params: SendReportEmailParams): Promise<void> {
@@ -58,10 +69,11 @@ export class EmailService {
     };
 
     try {
-      await this.transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${to}`);
-    } catch (error) {
-      console.error('❌ Error sending email:', error);
+      this.logger.log(`📧 Sending report email to ${to} for report ${reportId}`);
+      const result = await this.transporter.sendMail(mailOptions);
+      this.logger.log(`✅ Email sent successfully to ${to}. Message ID: ${result.messageId}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Error sending report email to ${to}: ${error.message}`);
       throw new Error('Failed to send email');
     }
   }
@@ -356,15 +368,16 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     }
   }
 
-  private logger = { log: console.log, error: console.error };
+  // Logger now defined at class level above
 
   async testConnection(): Promise<boolean> {
     try {
+      this.logger.log('🔍 Testing SMTP connection...');
       await this.transporter.verify();
-      console.log('✅ SMTP connection successful');
+      this.logger.log('✅ SMTP connection successful');
       return true;
-    } catch (error) {
-      console.error('❌ SMTP connection failed:', error);
+    } catch (error: any) {
+      this.logger.error(`❌ SMTP connection failed: ${error.message}`);
       return false;
     }
   }

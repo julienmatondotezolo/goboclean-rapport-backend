@@ -215,26 +215,56 @@ export class MissionsService {
       (workers || []).forEach((w) => workerMap.set(w.id, w));
     }
 
-    // Fetch photos for all missions
+    // Fetch photos for all missions via reports
     const missionIds = missions.map(m => m.id);
-    const { data: photos } = await supabase
-      .from('mission_photos')
-      .select('mission_id, storage_path, type')
-      .in('mission_id', missionIds);
+    this.logger.log(`🔍 Fetching photos for ${missionIds.length} missions`);
+    
+    // Get both pre-reports and final reports for these missions
+    const { data: reports } = await supabase
+      .from('reports')
+      .select(`
+        id,
+        status,
+        photos!inner(storage_path, type, order)
+      `)
+      .or(`id.in.(${missions.map(m => m.pre_report_id).filter(Boolean).join(',')}),id.in.(${missions.map(m => m.final_report_id).filter(Boolean).join(',')})`);
 
-    // Group photos by mission and type
+    // Create a map from mission to photos via report IDs
     const photosMap = new Map<string, { before: string[], after: string[] }>();
-    (photos || []).forEach((photo) => {
-      if (!photosMap.has(photo.mission_id)) {
-        photosMap.set(photo.mission_id, { before: [], after: [] });
+    
+    // Initialize empty arrays for all missions
+    missionIds.forEach(missionId => {
+      photosMap.set(missionId, { before: [], after: [] });
+    });
+    
+    // Map photos to missions through reports
+    missions.forEach(mission => {
+      const photoGroup = photosMap.get(mission.id)!;
+      
+      // Get before photos from pre-report
+      if (mission.pre_report_id) {
+        const preReport = (reports || []).find(r => r.id === mission.pre_report_id);
+        if (preReport?.photos) {
+          preReport.photos
+            .filter((p: any) => p.type === 'before')
+            .sort((a: any, b: any) => a.order - b.order)
+            .forEach((p: any) => photoGroup.before.push(p.storage_path));
+        }
       }
-      const photoGroup = photosMap.get(photo.mission_id)!;
-      if (photo.type === 'before') {
-        photoGroup.before.push(photo.storage_path);
-      } else if (photo.type === 'after') {
-        photoGroup.after.push(photo.storage_path);
+      
+      // Get after photos from final report
+      if (mission.final_report_id) {
+        const finalReport = (reports || []).find(r => r.id === mission.final_report_id);
+        if (finalReport?.photos) {
+          finalReport.photos
+            .filter((p: any) => p.type === 'after')
+            .sort((a: any, b: any) => a.order - b.order)
+            .forEach((p: any) => photoGroup.after.push(p.storage_path));
+        }
       }
     });
+    
+    this.logger.log(`📸 Found photos for ${Array.from(photosMap.values()).filter(p => p.before.length > 0 || p.after.length > 0).length} missions`);
 
     return missions.map((mission) => {
       const missionPhotos = photosMap.get(mission.id) || { before: [], after: [] };
@@ -450,16 +480,24 @@ export class MissionsService {
     }
 
     // Upload photos to Supabase storage
-    // FIX 5: Store the path once and reuse for both upload and DB insert
+    this.logger.log(`📸 Uploading ${files.length} before-pictures for mission ${missionId}`);
     const photoUrls: string[] = [];
     const storagePaths: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const storagePath = `missions/${missionId}/before/${Date.now()}_${i}.${file.originalname.split('.').pop() || 'jpg'}`;
       storagePaths.push(storagePath);
-      await this.supabaseService.uploadFile('roof-photos', storagePath, file.buffer, file.mimetype);
-      const publicUrl = await this.supabaseService.getPublicUrl('roof-photos', storagePath);
-      photoUrls.push(publicUrl);
+      this.logger.log(`📤 Uploading before-picture ${i+1}/${files.length}: ${storagePath} (${file.size} bytes)`);
+      
+      try {
+        await this.supabaseService.uploadFile('roof-photos', storagePath, file.buffer, file.mimetype);
+        const publicUrl = await this.supabaseService.getPublicUrl('roof-photos', storagePath);
+        photoUrls.push(publicUrl);
+        this.logger.log(`✅ Upload successful: ${publicUrl}`);
+      } catch (uploadError: any) {
+        this.logger.error(`❌ Upload failed for ${storagePath}: ${uploadError.message}`);
+        throw new BadRequestException(`Failed to upload before-picture ${i+1}: ${uploadError.message}`);
+      }
     }
 
     // Set the 10-minute timer
@@ -487,16 +525,29 @@ export class MissionsService {
     }
 
     // Insert photos into photos table (linked to pre-report)
-    // FIX 5: Reuse the stored paths from the upload loop
     if (preReport) {
+      this.logger.log(`💾 Saving ${storagePaths.length} before-picture records to database for report ${preReport.id}`);
       for (let i = 0; i < storagePaths.length; i++) {
-        await supabase.from('photos').insert({
-          report_id: preReport.id,
-          type: 'before',
-          storage_path: storagePaths[i],
-          order: i + 1,
-        });
+        try {
+          const { data: photoRecord, error: photoError } = await supabase.from('photos').insert({
+            report_id: preReport.id,
+            type: 'before',
+            storage_path: storagePaths[i],
+            order: i + 1,
+          }).select().single();
+          
+          if (photoError) {
+            this.logger.error(`❌ Failed to save before-picture ${i+1} to database: ${photoError.message}`);
+            throw new BadRequestException(`Failed to save before-picture ${i+1}: ${photoError.message}`);
+          }
+          this.logger.log(`✅ Saved before-picture ${i+1} record: ID ${photoRecord.id}`);
+        } catch (dbError: any) {
+          this.logger.error(`❌ Database error saving before-picture ${i+1}: ${dbError.message}`);
+          throw dbError;
+        }
       }
+    } else {
+      this.logger.warn(`⚠️ No pre-report created, skipping photo database records`);
     }
 
     // Update mission status
@@ -581,16 +632,24 @@ export class MissionsService {
     }
 
     // Upload after-pictures
-    // FIX 5: Store the path once and reuse for both upload and DB insert
+    this.logger.log(`📸 Uploading ${files.length} after-pictures for mission ${missionId}`);
     const afterPhotoUrls: string[] = [];
     const afterStoragePaths: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const storagePath = `missions/${missionId}/after/${Date.now()}_${i}.${file.originalname.split('.').pop() || 'jpg'}`;
       afterStoragePaths.push(storagePath);
-      await this.supabaseService.uploadFile('roof-photos', storagePath, file.buffer, file.mimetype);
-      const publicUrl = await this.supabaseService.getPublicUrl('roof-photos', storagePath);
-      afterPhotoUrls.push(publicUrl);
+      this.logger.log(`📤 Uploading after-picture ${i+1}/${files.length}: ${storagePath} (${file.size} bytes)`);
+      
+      try {
+        await this.supabaseService.uploadFile('roof-photos', storagePath, file.buffer, file.mimetype);
+        const publicUrl = await this.supabaseService.getPublicUrl('roof-photos', storagePath);
+        afterPhotoUrls.push(publicUrl);
+        this.logger.log(`✅ Upload successful: ${publicUrl}`);
+      } catch (uploadError: any) {
+        this.logger.error(`❌ Upload failed for ${storagePath}: ${uploadError.message}`);
+        throw new BadRequestException(`Failed to upload after-picture ${i+1}: ${uploadError.message}`);
+      }
     }
 
     // Upload signatures
@@ -633,16 +692,29 @@ export class MissionsService {
     }
 
     // Insert after-photos linked to final report
-    // FIX 5: Reuse the stored paths from the upload loop
     if (finalReport) {
+      this.logger.log(`💾 Saving ${afterStoragePaths.length} after-picture records to database for report ${finalReport.id}`);
       for (let i = 0; i < afterStoragePaths.length; i++) {
-        await supabase.from('photos').insert({
-          report_id: finalReport.id,
-          type: 'after',
-          storage_path: afterStoragePaths[i],
-          order: i + 1,
-        });
+        try {
+          const { data: photoRecord, error: photoError } = await supabase.from('photos').insert({
+            report_id: finalReport.id,
+            type: 'after',
+            storage_path: afterStoragePaths[i],
+            order: i + 1,
+          }).select().single();
+          
+          if (photoError) {
+            this.logger.error(`❌ Failed to save after-picture ${i+1} to database: ${photoError.message}`);
+            throw new BadRequestException(`Failed to save after-picture ${i+1}: ${photoError.message}`);
+          }
+          this.logger.log(`✅ Saved after-picture ${i+1} record: ID ${photoRecord.id}`);
+        } catch (dbError: any) {
+          this.logger.error(`❌ Database error saving after-picture ${i+1}: ${dbError.message}`);
+          throw dbError;
+        }
       }
+    } else {
+      this.logger.warn(`⚠️ No final report created, skipping photo database records`);
     }
 
     // Update mission status to completed

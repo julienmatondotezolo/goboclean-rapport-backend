@@ -234,7 +234,7 @@ export class MissionsService {
         .select(`
           id,
           status,
-          photos!inner(storage_path, type, order)
+          photos!inner(storage_path, url, type, order)
         `)
         .in('id', allReportIds);
 
@@ -262,14 +262,15 @@ export class MissionsService {
       if (mission.pre_report_id) {
         const preReport = reports.find(r => r.id === mission.pre_report_id);
         if (preReport?.photos) {
-          const beforePhotoPromises = preReport.photos
+          const beforePhotos = preReport.photos
             .filter((p: any) => p.type === 'before')
             .sort((a: any, b: any) => a.order - b.order)
-            .map(async (p: any) => await this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
+            .map((p: any) => p.url || this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
           
-          const beforePhotos = await Promise.all(beforePhotoPromises);
-          photoGroup.before.push(...beforePhotos);
-          this.logger.log(`📸 Mission ${mission.id}: Found ${beforePhotos.length} before photos`);
+          // Resolve any promises (for fallback URLs)
+          const resolvedBeforePhotos = await Promise.all(beforePhotos);
+          photoGroup.before.push(...resolvedBeforePhotos);
+          this.logger.log(`📸 Mission ${mission.id}: Found ${resolvedBeforePhotos.length} before photos`);
         }
       }
       
@@ -277,14 +278,15 @@ export class MissionsService {
       if (mission.final_report_id) {
         const finalReport = reports.find(r => r.id === mission.final_report_id);
         if (finalReport?.photos) {
-          const afterPhotoPromises = finalReport.photos
+          const afterPhotos = finalReport.photos
             .filter((p: any) => p.type === 'after')
             .sort((a: any, b: any) => a.order - b.order)
-            .map(async (p: any) => await this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
+            .map((p: any) => p.url || this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
           
-          const afterPhotos = await Promise.all(afterPhotoPromises);
-          photoGroup.after.push(...afterPhotos);
-          this.logger.log(`📸 Mission ${mission.id}: Found ${afterPhotos.length} after photos`);
+          // Resolve any promises (for fallback URLs)
+          const resolvedAfterPhotos = await Promise.all(afterPhotos);
+          photoGroup.after.push(...resolvedAfterPhotos);
+          this.logger.log(`📸 Mission ${mission.id}: Found ${resolvedAfterPhotos.length} after photos`);
         }
       }
     }));
@@ -560,6 +562,7 @@ export class MissionsService {
             report_id: preReport.id,
             type: 'before',
             storage_path: storagePaths[i],
+            url: photoUrls[i],
             order: i + 1,
           }).select().single();
           
@@ -727,6 +730,7 @@ export class MissionsService {
             report_id: finalReport.id,
             type: 'after',
             storage_path: afterStoragePaths[i],
+            url: afterPhotoUrls[i],
             order: i + 1,
           }).select().single();
           

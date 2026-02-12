@@ -33,29 +33,12 @@ export class ReportsService {
       }),
     );
 
-    // Get signature URLs
-    let workerSignatureUrl = null;
-    let clientSignatureUrl = null;
-
-    if (report.worker_signature_url) {
-      workerSignatureUrl = this.supabaseService.getPublicUrl(
-        'signatures',
-        report.worker_signature_url,
-      );
-    }
-
-    if (report.client_signature_url) {
-      clientSignatureUrl = this.supabaseService.getPublicUrl(
-        'signatures',
-        report.client_signature_url,
-      );
-    }
-
+    // Signature URLs are already full public URLs from the database
     const reportData = {
       ...report,
       photos: photosWithUrls,
-      worker_signature_url: workerSignatureUrl,
-      client_signature_url: clientSignatureUrl,
+      worker_signature_url: report.worker_signature_url,
+      client_signature_url: report.client_signature_url,
     };
 
     // 4. Generate PDF
@@ -103,5 +86,56 @@ export class ReportsService {
 
   async getReports(workerId?: string) {
     return await this.supabaseService.getReports(workerId);
+  }
+
+  async regeneratePdfOnly(reportId: string) {
+    // 1. Get report data with photos
+    const report = await this.supabaseService.getReport(reportId);
+    
+    if (!report) {
+      throw new NotFoundException(`Report ${reportId} not found`);
+    }
+
+    // 2. Get company settings
+    const company = await this.supabaseService.getCompanySettings();
+
+    // 3. Get public URLs for photos
+    const photosWithUrls = await Promise.all(
+      report.photos.map(async (photo) => {
+        const url = this.supabaseService.getPublicUrl('roof-photos', photo.storage_path);
+        return {
+          ...photo,
+          url,
+        };
+      }),
+    );
+
+    // Signature URLs are already full public URLs from the database
+    const reportData = {
+      ...report,
+      photos: photosWithUrls,
+      worker_signature_url: report.worker_signature_url,
+      client_signature_url: report.client_signature_url,
+    };
+
+    // 4. Generate PDF
+    const pdfBuffer = await this.pdfService.generateReportPDF(reportData, company);
+
+    // 5. Upload PDF to Supabase Storage
+    const pdfPath = `${reportId}/report.pdf`;
+    await this.supabaseService.uploadFile('pdfs', pdfPath, pdfBuffer, 'application/pdf');
+    
+    const pdfUrl = this.supabaseService.getPublicUrl('pdfs', pdfPath);
+
+    // 6. Update report with PDF URL
+    await this.supabaseService.updateReport(reportId, {
+      pdf_url: pdfUrl,
+    });
+
+    return {
+      success: true,
+      pdfUrl,
+      message: 'PDF regenerated successfully (email not sent)',
+    };
   }
 }

@@ -164,7 +164,7 @@ export class MissionsController {
   @Post(':id/before-pictures')
   @UseInterceptors(FilesInterceptor('photos', 10))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload before-pictures, create pre-report, start 10-min timer' })
+  @ApiOperation({ summary: 'Upload before-pictures, create pre-report, start completion timer' })
   @ApiParam({ name: 'id', description: 'Mission UUID' })
   @ApiBody({
     schema: {

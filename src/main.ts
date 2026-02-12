@@ -60,13 +60,14 @@ All endpoints require Bearer token authentication. Get a token by logging in via
 
 ## Photo Storage
 - Before/after pictures are stored in Supabase storage
-- Photos are linked to missions via pre_report_id and final_report_id
+- Photos are linked to missions via report_id (single report with both before and after photos)
 - Mission responses include before_pictures and after_pictures arrays
 
 ## Email System  
-- SMTP via Combell (info@goboclean.be)
+- Resend API (info@goboclean.be)
 - Automatic notifications for mission events
 - PDF reports generated and emailed on completion
+- All emails sent to roofrevive.be@gmail.com and client email
       `)
       .setVersion('1.0')
       .addBearerAuth({
@@ -110,7 +111,7 @@ All endpoints require Bearer token authentication. Get a token by logging in via
   }
   logger.log('🌍 CORS enabled for: ' + (process.env.FRONTEND_URL || 'http://localhost:3000'));
   logger.log('📊 Environment: ' + (process.env.NODE_ENV || 'development'));
-  logger.log('📧 SMTP: ' + (process.env.SMTP_USER || 'not configured'));
+  logger.log('📧 Email: Resend API ' + (process.env.RESEND_API_KEY ? '✅' : '❌ not configured'));
   logger.log('='.repeat(60));
 }
 

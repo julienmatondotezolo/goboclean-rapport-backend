@@ -13,27 +13,31 @@ export class EmailController {
   @Post('test-connection')
   @UseGuards(AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Test SMTP connection (admin only)' })
+  @ApiOperation({ summary: 'Test Resend API connection (admin only)' })
   async testConnection() {
     const isConnected = await this.emailService.testConnection();
     return {
       connected: isConnected,
-      message: isConnected ? 'SMTP connection successful' : 'SMTP connection failed',
+      message: isConnected ? 'Resend API connection successful' : 'Resend API connection failed',
     };
   }
 
   @Post('test-send')
   @UseGuards(AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Send test email (admin only)' })
-  async testSend(@Body() body: { to: string; subject?: string }) {
-    const { to, subject = 'Test Email from GoBo Clean' } = body;
+  @ApiOperation({ summary: 'Send test email via Resend (admin only)' })
+  async testSend(@Body() body: { to?: string; subject?: string }) {
+    const { to = 'roofrevive.be@gmail.com', subject = 'Test Email from GoBo Clean' } = body;
     
-    const mailOptions = {
-      from: 'info@goboclean.be',
-      to,
-      subject,
-      html: `
+    try {
+      const resend = (this.emailService as any).resend;
+      const fromEmail = (this.emailService as any).fromEmail;
+      
+      const result = await resend.emails.send({
+        from: fromEmail,
+        to: [to],
+        subject,
+        html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
@@ -42,22 +46,19 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 </style></head><body>
 <div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Test Email</p></div>
 <div class="content">
-  <h2>SMTP Test Successful! ✅</h2>
-  <p>This is a test email from the GoBo Clean backend.</p>
+  <h2>Resend Test Successful! ✅</h2>
+  <p>This is a test email from the GoBo Clean backend using Resend.</p>
   <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-  <p>If you received this email, SMTP configuration is working correctly.</p>
+  <p>If you received this email, Resend configuration is working correctly.</p>
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
-    };
-
-    try {
-      const transporter = (this.emailService as any).transporter;
-      const result = await transporter.sendMail(mailOptions);
+      });
+      
       return {
         success: true,
         message: `Test email sent successfully to ${to}`,
-        messageId: result.messageId,
+        messageId: result.data?.id,
       };
     } catch (error: any) {
       return {

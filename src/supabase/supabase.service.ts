@@ -43,6 +43,33 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    
+    // Transform pdf_url: if it's an empty JSON object string or invalid, set to null
+    if (data && data.pdf_url) {
+      try {
+        // Check if pdf_url is a JSON string like "{}"
+        if (data.pdf_url === '{}' || data.pdf_url === 'null' || data.pdf_url === '') {
+          data.pdf_url = null;
+        } else if (data.pdf_url.startsWith('{')) {
+          // Try to parse as JSON
+          const parsed = JSON.parse(data.pdf_url);
+          // If it's an empty object, set to null
+          if (Object.keys(parsed).length === 0) {
+            data.pdf_url = null;
+          }
+        }
+        // If pdf_url exists and is not a full URL, construct it
+        else if (data.pdf_url && !data.pdf_url.startsWith('http')) {
+          data.pdf_url = this.getPublicUrl('pdfs', data.pdf_url);
+        }
+      } catch (e) {
+        // If parsing fails, keep the original value or set to null if it looks like invalid JSON
+        if (data.pdf_url.startsWith('{') || data.pdf_url === '{}') {
+          data.pdf_url = null;
+        }
+      }
+    }
+    
     return data;
   }
 
@@ -58,7 +85,7 @@ export class SupabaseService {
         ),
         photos(count)
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false});
 
     if (workerId) {
       query = query.eq('worker_id', workerId);
@@ -67,6 +94,37 @@ export class SupabaseService {
     const { data, error } = await query;
 
     if (error) throw error;
+    
+    // Transform pdf_url for each report
+    if (data && Array.isArray(data)) {
+      data.forEach((report) => {
+        if (report.pdf_url) {
+          try {
+            // Check if pdf_url is a JSON string like "{}"
+            if (report.pdf_url === '{}' || report.pdf_url === 'null' || report.pdf_url === '') {
+              report.pdf_url = null;
+            } else if (report.pdf_url.startsWith('{')) {
+              // Try to parse as JSON
+              const parsed = JSON.parse(report.pdf_url);
+              // If it's an empty object, set to null
+              if (Object.keys(parsed).length === 0) {
+                report.pdf_url = null;
+              }
+            }
+            // If pdf_url exists and is not a full URL, construct it
+            else if (report.pdf_url && !report.pdf_url.startsWith('http')) {
+              report.pdf_url = this.getPublicUrl('pdfs', report.pdf_url);
+            }
+          } catch (e) {
+            // If parsing fails, keep the original value or set to null if it looks like invalid JSON
+            if (report.pdf_url.startsWith('{') || report.pdf_url === '{}') {
+              report.pdf_url = null;
+            }
+          }
+        }
+      });
+    }
+    
     return data;
   }
 

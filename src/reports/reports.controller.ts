@@ -12,12 +12,21 @@ export class ReportsController {
   constructor(private reportsService: ReportsService) {}
 
   @Post(':id/generate-pdf')
-  @ApiOperation({ summary: 'Generate PDF and send email for a report' })
+  @ApiOperation({ summary: 'Generate PDF and send email for a report (can be used to regenerate)' })
   @ApiParam({ name: 'id', description: 'Report ID' })
   @ApiResponse({ status: 200, description: 'PDF generated and email sent successfully' })
   @ApiResponse({ status: 404, description: 'Report not found' })
   async generatePdf(@Param('id') id: string) {
     return await this.reportsService.generateAndSendReport(id);
+  }
+
+  @Post(':id/regenerate-pdf')
+  @ApiOperation({ summary: 'Regenerate PDF without sending email (for fixing broken PDFs)' })
+  @ApiParam({ name: 'id', description: 'Report ID' })
+  @ApiResponse({ status: 200, description: 'PDF regenerated successfully' })
+  @ApiResponse({ status: 404, description: 'Report not found' })
+  async regeneratePdf(@Param('id') id: string) {
+    return await this.reportsService.regeneratePdfOnly(id);
   }
 
   @Get(':id')

@@ -240,9 +240,9 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     }
   }
 
-  async sendPreReportEmail(mission: MissionData, adminEmails: string[]): Promise<void> {
+  async sendReportSubmittedEmail(mission: MissionData, adminEmails: string[]): Promise<void> {
     if (!adminEmails || adminEmails.length === 0) {
-      this.logger.log(`No admin emails provided for mission ${mission.id}, skipping pre-report email`);
+      this.logger.log(`No admin emails provided for mission ${mission.id}, skipping report submitted email`);
       return;
     }
     const to = adminEmails;
@@ -251,7 +251,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     const mailOptions = {
       from: this.configService.get<string>('SMTP_FROM'),
       to,
-      subject: `Pré-rapport soumis — ${clientName} — ${mission.client_address}`,
+      subject: `Rapport soumis — ${clientName} — ${mission.client_address}`,
       html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -260,7 +260,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin:16px 0}
 </style></head><body>
-<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Pré-rapport</p></div>
+<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Rapport soumis</p></div>
 <div class="content">
   <h2>Photos "avant" soumises</h2>
   <p>Les photos avant-intervention ont été soumises pour la mission suivante :</p>
@@ -269,7 +269,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     <p><strong>📍 Adresse :</strong> ${mission.client_address}</p>
     <p><strong>⏱️ Timer :</strong> 10 minutes de travail minimum démarré</p>
   </div>
-  <p>Ouvrez l'application pour consulter le pré-rapport.</p>
+  <p>Ouvrez l'application pour consulter le rapport.</p>
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
@@ -277,9 +277,9 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 
     try {
       await this.transporter.sendMail(mailOptions);
-      this.logger.log(`Pre-report email sent for mission ${mission.id}`);
+      this.logger.log(`Report submitted email sent for mission ${mission.id}`);
     } catch (error) {
-      this.logger.error(`Failed to send pre-report email: ${error.message}`);
+      this.logger.error(`Failed to send report submitted email: ${error.message}`);
     }
   }
 

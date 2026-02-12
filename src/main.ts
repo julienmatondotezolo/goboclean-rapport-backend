@@ -60,7 +60,7 @@ All endpoints require Bearer token authentication. Get a token by logging in via
 
 ## Photo Storage
 - Before/after pictures are stored in Supabase storage
-- Photos are linked to missions via pre_report_id and final_report_id
+- Photos are linked to missions via report_id (single report with both before and after photos)
 - Mission responses include before_pictures and after_pictures arrays
 
 ## Email System  

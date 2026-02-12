@@ -220,15 +220,13 @@ export class MissionsService {
     this.logger.log(`🔍 Fetching photos for ${missionIds.length} missions`);
     
     // Collect all report IDs from missions
-    const preReportIds = missions.map(m => m.pre_report_id).filter(Boolean);
-    const finalReportIds = missions.map(m => m.final_report_id).filter(Boolean);
-    const allReportIds = [...preReportIds, ...finalReportIds];
+    const reportIds = missions.map(m => m.report_id).filter(Boolean);
     
-    this.logger.log(`📋 Found ${preReportIds.length} pre-reports and ${finalReportIds.length} final reports`);
+    this.logger.log(`📋 Found ${reportIds.length} reports`);
     
     // Get photos for these reports
     let reports: any[] = [];
-    if (allReportIds.length > 0) {
+    if (reportIds.length > 0) {
       const { data: reportsData, error: reportsError } = await supabase
         .from('reports')
         .select(`
@@ -236,7 +234,7 @@ export class MissionsService {
           status,
           photos!inner(storage_path, url, type, order)
         `)
-        .in('id', allReportIds);
+        .in('id', reportIds);
 
       if (reportsError) {
         this.logger.error(`❌ Failed to fetch reports: ${reportsError.message}`);
@@ -258,11 +256,12 @@ export class MissionsService {
     await Promise.all(missions.map(async mission => {
       const photoGroup = photosMap.get(mission.id)!;
       
-      // Get before photos from pre-report
-      if (mission.pre_report_id) {
-        const preReport = reports.find(r => r.id === mission.pre_report_id);
-        if (preReport?.photos) {
-          const beforePhotos = preReport.photos
+      // Get both before and after photos from single report
+      if (mission.report_id) {
+        const report = reports.find(r => r.id === mission.report_id);
+        if (report?.photos) {
+          // Get before photos
+          const beforePhotos = report.photos
             .filter((p: any) => p.type === 'before')
             .sort((a: any, b: any) => a.order - b.order)
             .map((p: any) => p.url || this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
@@ -271,14 +270,9 @@ export class MissionsService {
           const resolvedBeforePhotos = await Promise.all(beforePhotos);
           photoGroup.before.push(...resolvedBeforePhotos);
           this.logger.log(`📸 Mission ${mission.id}: Found ${resolvedBeforePhotos.length} before photos`);
-        }
-      }
-      
-      // Get after photos from final report
-      if (mission.final_report_id) {
-        const finalReport = reports.find(r => r.id === mission.final_report_id);
-        if (finalReport?.photos) {
-          const afterPhotos = finalReport.photos
+          
+          // Get after photos
+          const afterPhotos = report.photos
             .filter((p: any) => p.type === 'after')
             .sort((a: any, b: any) => a.order - b.order)
             .map((p: any) => p.url || this.supabaseService.getPublicUrl('roof-photos', p.storage_path));
@@ -535,31 +529,44 @@ export class MissionsService {
 
     const supabase = this.supabaseService.getClient();
 
-    // Create pre-report in reports table
-    const { data: preReport, error: reportError } = await supabase
-      .from('reports')
-      .insert({
-        worker_id: userId,
-        client_first_name: mission.client_first_name,
-        client_last_name: mission.client_last_name,
-        client_address: mission.client_address,
-        client_phone: mission.client_phone,
-        status: 'draft',
-      })
-      .select()
-      .single();
+    // Create or get existing report
+    let report = null;
+    if (mission.report_id) {
+      // If report already exists, fetch it
+      const { data: existingReport } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('id', mission.report_id)
+        .single();
+      report = existingReport;
+    } else {
+      // Create new report in draft status
+      const { data: newReport, error: reportError } = await supabase
+        .from('reports')
+        .insert({
+          worker_id: userId,
+          client_first_name: mission.client_first_name,
+          client_last_name: mission.client_last_name,
+          client_address: mission.client_address,
+          client_phone: mission.client_phone,
+          status: 'draft',
+        })
+        .select()
+        .single();
 
-    if (reportError) {
-      this.logger.error(`Failed to create pre-report: ${reportError.message}`);
+      if (reportError) {
+        this.logger.error(`Failed to create report: ${reportError.message}`);
+      }
+      report = newReport;
     }
 
-    // Insert photos into photos table (linked to pre-report)
-    if (preReport) {
-      this.logger.log(`💾 Saving ${storagePaths.length} before-picture records to database for report ${preReport.id}`);
+    // Insert photos into photos table (linked to report)
+    if (report) {
+      this.logger.log(`💾 Saving ${storagePaths.length} before-picture records to database for report ${report.id}`);
       for (let i = 0; i < storagePaths.length; i++) {
         try {
           const { data: photoRecord, error: photoError } = await supabase.from('photos').insert({
-            report_id: preReport.id,
+            report_id: report.id,
             type: 'before',
             storage_path: storagePaths[i],
             url: photoUrls[i],
@@ -577,7 +584,7 @@ export class MissionsService {
         }
       }
     } else {
-      this.logger.warn(`⚠️ No pre-report created, skipping photo database records`);
+      this.logger.warn(`⚠️ No report created, skipping photo database records`);
     }
 
     // Update mission status
@@ -587,8 +594,8 @@ export class MissionsService {
       completion_unlocked_at: completionUnlockedAt.toISOString(),
     };
 
-    if (preReport) {
-      updateData.pre_report_id = preReport.id;
+    if (report) {
+      updateData.report_id = report.id;
     }
 
     const { data, error } = await supabase
@@ -602,8 +609,8 @@ export class MissionsService {
       throw new BadRequestException(`Failed to update mission: ${error.message}`);
     }
 
-    // Notify admins about pre-report
-    await this.notifyAdminsPreReport(data);
+    // Notify admins about report submission
+    await this.notifyAdminsReportSubmitted(data);
 
     this.logger.log(
       `Mission ${missionId}: before-pictures submitted. Completion unlocked at ${completionUnlockedAt.toISOString()}`,
@@ -612,7 +619,7 @@ export class MissionsService {
     return {
       mission: data,
       before_pictures: photoUrls,
-      pre_report_id: preReport?.id || null,
+      report_id: report?.id || null,
       completion_unlocked_at: completionUnlockedAt.toISOString(),
     };
   }
@@ -700,34 +707,57 @@ export class MissionsService {
 
     const supabase = this.supabaseService.getClient();
 
-    // Create final report
-    const { data: finalReport, error: reportError } = await supabase
-      .from('reports')
-      .insert({
-        worker_id: userId,
-        client_first_name: mission.client_first_name,
-        client_last_name: mission.client_last_name,
-        client_address: mission.client_address,
-        client_phone: mission.client_phone,
-        worker_signature_url: workerSignatureUrl,
-        client_signature_url: clientSignatureUrl,
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    // Get existing report or create new one
+    let report = null;
+    if (mission.report_id) {
+      // Update existing report with signatures and mark as completed
+      const { data: updatedReport, error: updateError } = await supabase
+        .from('reports')
+        .update({
+          worker_signature_url: workerSignatureUrl,
+          client_signature_url: clientSignatureUrl,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', mission.report_id)
+        .select()
+        .single();
 
-    if (reportError) {
-      this.logger.error(`Failed to create final report: ${reportError.message}`);
+      if (updateError) {
+        this.logger.error(`Failed to update report: ${updateError.message}`);
+      }
+      report = updatedReport;
+    } else {
+      // Create new report if it doesn't exist (edge case)
+      const { data: newReport, error: reportError } = await supabase
+        .from('reports')
+        .insert({
+          worker_id: userId,
+          client_first_name: mission.client_first_name,
+          client_last_name: mission.client_last_name,
+          client_address: mission.client_address,
+          client_phone: mission.client_phone,
+          worker_signature_url: workerSignatureUrl,
+          client_signature_url: clientSignatureUrl,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (reportError) {
+        this.logger.error(`Failed to create report: ${reportError.message}`);
+      }
+      report = newReport;
     }
 
-    // Insert after-photos linked to final report
-    if (finalReport) {
-      this.logger.log(`💾 Saving ${afterStoragePaths.length} after-picture records to database for report ${finalReport.id}`);
+    // Insert after-photos linked to report
+    if (report) {
+      this.logger.log(`💾 Saving ${afterStoragePaths.length} after-picture records to database for report ${report.id}`);
       for (let i = 0; i < afterStoragePaths.length; i++) {
         try {
           const { data: photoRecord, error: photoError } = await supabase.from('photos').insert({
-            report_id: finalReport.id,
+            report_id: report.id,
             type: 'after',
             storage_path: afterStoragePaths[i],
             url: afterPhotoUrls[i],
@@ -745,7 +775,7 @@ export class MissionsService {
         }
       }
     } else {
-      this.logger.warn(`⚠️ No final report created, skipping photo database records`);
+      this.logger.warn(`⚠️ No report available, skipping photo database records`);
     }
 
     // Update mission status to completed
@@ -754,8 +784,8 @@ export class MissionsService {
       completed_at: new Date().toISOString(),
     };
 
-    if (finalReport) {
-      updateData.final_report_id = finalReport.id;
+    if (report) {
+      updateData.report_id = report.id;
     }
 
     const { data, error } = await supabase
@@ -769,13 +799,13 @@ export class MissionsService {
       throw new BadRequestException(`Failed to complete mission: ${error.message}`);
     }
 
-    // FIX 1: Generate PDF and send report email via ReportsService
-    if (finalReport) {
+    // Generate PDF and send report email via ReportsService
+    if (report) {
       try {
-        await this.reportsService.generateAndSendReport(finalReport.id);
-        this.logger.log(`PDF generated and sent for report ${finalReport.id}`);
+        await this.reportsService.generateAndSendReport(report.id);
+        this.logger.log(`PDF generated and sent for report ${report.id}`);
       } catch (pdfError: any) {
-        this.logger.error(`Failed to generate/send PDF for report ${finalReport.id}: ${pdfError.message}`);
+        this.logger.error(`Failed to generate/send PDF for report ${report.id}: ${pdfError.message}`);
         // Don't fail the mission completion if PDF generation fails — it can be retried
       }
     }
@@ -788,7 +818,7 @@ export class MissionsService {
     return {
       mission: data,
       after_pictures: afterPhotoUrls,
-      final_report_id: finalReport?.id || null,
+      report_id: report?.id || null,
       worker_signature_url: workerSignatureUrl,
       client_signature_url: clientSignatureUrl,
     };
@@ -977,7 +1007,7 @@ export class MissionsService {
     await this.emailService.sendMissionAssignedEmail(mission, workerEmails);
   }
 
-  private async notifyAdminsPreReport(mission: any) {
+  private async notifyAdminsReportSubmitted(mission: any) {
     const supabase = this.supabaseService.getClient();
 
     // Find all admins
@@ -990,17 +1020,17 @@ export class MissionsService {
       for (const admin of admins) {
         await this.notificationsService.createAndSendNotification(
           admin.id,
-          'Pre-Report Submitted',
+          'Report Submitted',
           `Before-pictures submitted for mission at ${mission.client_address}. Completion timer started.`,
-          'pre_report',
+          'report_submitted',
           mission.id,
         );
       }
     }
 
-    // FIX 2: Send pre-report email to actual admin emails
+    // Send report email to actual admin emails
     const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
-    await this.emailService.sendPreReportEmail(mission, adminEmails);
+    await this.emailService.sendReportSubmittedEmail(mission, adminEmails);
   }
 
   private async notifyMissionCompleted(mission: any) {

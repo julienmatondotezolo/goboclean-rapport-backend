@@ -36,31 +36,20 @@ export class MissionsTestController {
       return { error: 'Mission not found', missionId };
     }
 
-    // Get pre-report photos
-    let preReportPhotos: any[] = [];
-    if (mission.pre_report_id) {
-      const { data: prePhotos } = await supabase
+    // Get report photos
+    let reportPhotos: any[] = [];
+    if (mission.report_id) {
+      const { data: photos } = await supabase
         .from('photos')
         .select('*')
-        .eq('report_id', mission.pre_report_id)
+        .eq('report_id', mission.report_id)
         .order('order');
-      preReportPhotos = prePhotos || [];
-    }
-
-    // Get final report photos
-    let finalReportPhotos: any[] = [];
-    if (mission.final_report_id) {
-      const { data: finalPhotos } = await supabase
-        .from('photos')
-        .select('*')
-        .eq('report_id', mission.final_report_id)
-        .order('order');
-      finalReportPhotos = finalPhotos || [];
+      reportPhotos = photos || [];
     }
 
     // Generate public URLs
     const beforePhotos = await Promise.all(
-      preReportPhotos
+      reportPhotos
         .filter(p => p.type === 'before')
         .map(async p => ({
           id: p.id,
@@ -71,7 +60,7 @@ export class MissionsTestController {
     );
 
     const afterPhotos = await Promise.all(
-      finalReportPhotos
+      reportPhotos
         .filter(p => p.type === 'after')
         .map(async p => ({
           id: p.id,
@@ -85,8 +74,7 @@ export class MissionsTestController {
       mission: {
         id: mission.id,
         status: mission.status,
-        pre_report_id: mission.pre_report_id,
-        final_report_id: mission.final_report_id,
+        report_id: mission.report_id,
         client_address: mission.client_address,
       },
       photo_debug: {
@@ -96,8 +84,7 @@ export class MissionsTestController {
         after_photos: afterPhotos,
       },
       raw_data: {
-        pre_report_photos: preReportPhotos,
-        final_report_photos: finalReportPhotos,
+        report_photos: reportPhotos,
       }
     };
   }
@@ -118,8 +105,7 @@ export class MissionsTestController {
       id: mission.id,
       status: mission.status,
       client_address: mission.client_address,
-      pre_report_id: mission.pre_report_id,
-      final_report_id: mission.final_report_id,
+      report_id: mission.report_id,
       before_pictures_count: mission.before_pictures?.length || 0,
       after_pictures_count: mission.after_pictures?.length || 0,
       has_before_pictures: !!mission.before_pictures?.length,

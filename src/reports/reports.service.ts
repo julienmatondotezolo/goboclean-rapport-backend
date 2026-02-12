@@ -70,6 +70,7 @@ export class ReportsService {
     return {
       success: true,
       pdfUrl,
+      pdfBuffer,
       message: 'Report generated and sent successfully',
     };
   }

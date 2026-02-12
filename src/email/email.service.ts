@@ -291,13 +291,22 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     }
   }
 
-  async sendMissionCompletedEmail(mission: MissionData, recipientEmails: string[]): Promise<void> {
+  async sendMissionCompletedEmail(mission: MissionData, recipientEmails: string[], pdfBuffer?: Buffer): Promise<void> {
     if (!recipientEmails || recipientEmails.length === 0) {
       this.logger.log(`No recipient emails provided for mission ${mission.id}, skipping completion email`);
       return;
     }
 
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
+    
+    // Prepare attachments
+    const attachments = [];
+    if (pdfBuffer) {
+      attachments.push({
+        filename: `Rapport-${mission.id.slice(0, 8).toUpperCase()}.pdf`,
+        content: pdfBuffer,
+      });
+    }
 
     try {
       const { data, error } = await this.resend.emails.send({
@@ -325,6 +334,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
+        ...(attachments.length > 0 && { attachments }),
       });
 
       if (error) {

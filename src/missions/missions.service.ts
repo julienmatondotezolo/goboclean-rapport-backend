@@ -1030,7 +1030,7 @@ export class MissionsService {
 
     // Send report email to actual admin emails
     const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
-    await this.emailService.sendReportSubmittedEmail(mission, adminEmails);
+    await this.emailService.sendPreReportEmail(mission, adminEmails);
   }
 
   private async notifyMissionCompleted(mission: any) {

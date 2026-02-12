@@ -27,54 +27,49 @@ export interface MissionData {
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private resend: Resend;
-  private readonly fromEmail: string;
-  private readonly adminEmail = 'roofrevive.be@gmail.com';
 
   constructor(private configService: ConfigService) {
-    const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
-    this.fromEmail = this.configService.get<string>('FROM_EMAIL') || 'info@goboclean.be';
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
     
-    if (!resendApiKey) {
-      this.logger.error('❌ RESEND_API_KEY is not configured');
+    if (!apiKey) {
       throw new Error('RESEND_API_KEY is required');
     }
     
-    this.logger.log(`🔧 Initializing Resend with from email: ${this.fromEmail}`);
-    this.resend = new Resend(resendApiKey);
+    this.logger.log(`🔧 Initializing Resend API: ${apiKey.substring(0, 8)}...`);
     
-    this.logger.log('✅ Resend initialized successfully');
+    this.resend = new Resend(apiKey);
+    
+    // Test connection on startup  
+    this.testConnection();
   }
 
   async sendReportEmail(params: SendReportEmailParams): Promise<void> {
     const { to, clientName, reportId, pdfBuffer, workerName, address } = params;
 
-    // Always send to admin email (roofrevive.be@gmail.com) and client email
-    const recipients = [this.adminEmail];
-    if (to && to !== this.adminEmail) {
-      recipients.push(to);
-    }
-
-    const pdfBase64 = pdfBuffer.toString('base64');
-
     try {
-      this.logger.log(`📧 Sending report email to ${recipients.join(', ')} for report ${reportId}`);
+      this.logger.log(`📧 Sending report email to ${to} for report ${reportId}`);
       
-      const result = await this.resend.emails.send({
-        from: this.fromEmail,
-        to: recipients,
+      const { data, error } = await this.resend.emails.send({
+        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        to: [to],
         subject: `Rapport d'intervention - Nettoyage de toiture`,
         html: this.generateEmailTemplate(clientName, reportId, workerName, address),
         attachments: [
           {
             filename: `Rapport-${reportId.slice(0, 8).toUpperCase()}.pdf`,
-            content: pdfBase64,
+            content: pdfBuffer,
           },
         ],
       });
 
-      this.logger.log(`✅ Email sent successfully to ${recipients.join(', ')}. Message ID: ${result.data?.id}`);
+      if (error) {
+        this.logger.error(`❌ Error sending report email to ${to}: ${error.message}`);
+        throw new Error(`Failed to send email: ${error.message}`);
+      }
+
+      this.logger.log(`✅ Email sent successfully to ${to}. Message ID: ${data?.id}`);
     } catch (error: any) {
-      this.logger.error(`❌ Error sending report email: ${error.message}`);
+      this.logger.error(`❌ Error sending report email to ${to}: ${error.message}`);
       throw new Error('Failed to send email');
     }
   }
@@ -198,9 +193,7 @@ export class EmailService {
       this.logger.log(`No worker emails provided for mission ${mission.id}, skipping assignment email`);
       return;
     }
-    
-    // Always include admin email
-    const recipients = [this.adminEmail, ...workerEmails];
+
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
     const appointmentDate = new Date(mission.appointment_time).toLocaleString('fr-BE', {
       dateStyle: 'full',
@@ -208,9 +201,11 @@ export class EmailService {
     });
 
     try {
-      await this.resend.emails.send({
-        from: this.fromEmail,
-        to: recipients,
+      this.logger.log(`📧 Sending mission assigned email for mission ${mission.id} to ${workerEmails.join(', ')}`);
+      
+      const { data, error } = await this.resend.emails.send({
+        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        to: workerEmails,
         subject: `Nouvelle mission assignée — ${clientName}`,
         html: `
 <!DOCTYPE html>
@@ -235,26 +230,32 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 </div>
 </body></html>`,
       });
-      this.logger.log(`Mission assigned email sent for mission ${mission.id}`);
-    } catch (error) {
-      this.logger.error(`Failed to send mission assigned email: ${error.message}`);
+
+      if (error) {
+        this.logger.error(`❌ Failed to send mission assigned email: ${error.message}`);
+        throw new Error(`Failed to send email: ${error.message}`);
+      }
+
+      this.logger.log(`✅ Mission assigned email sent for mission ${mission.id}. Message ID: ${data?.id}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send mission assigned email: ${error.message}`);
+      throw error;
     }
   }
 
-  async sendReportSubmittedEmail(mission: MissionData, adminEmails: string[]): Promise<void> {
-    // Always include admin email
-    const recipients = [this.adminEmail];
-    if (adminEmails && adminEmails.length > 0) {
-      recipients.push(...adminEmails.filter(email => email !== this.adminEmail));
+  async sendPreReportEmail(mission: MissionData, adminEmails: string[]): Promise<void> {
+    if (!adminEmails || adminEmails.length === 0) {
+      this.logger.log(`No admin emails provided for mission ${mission.id}, skipping pre-report email`);
+      return;
     }
-    
+
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
     try {
-      await this.resend.emails.send({
-        from: this.fromEmail,
-        to: recipients,
-        subject: `Rapport soumis — ${clientName} — ${mission.client_address}`,
+      const { data, error } = await this.resend.emails.send({
+        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        to: adminEmails,
+        subject: `Pré-rapport soumis — ${clientName} — ${mission.client_address}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -263,7 +264,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin:16px 0}
 </style></head><body>
-<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Rapport soumis</p></div>
+<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Pré-rapport</p></div>
 <div class="content">
   <h2>Photos "avant" soumises</h2>
   <p>Les photos avant-intervention ont été soumises pour la mission suivante :</p>
@@ -272,30 +273,36 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     <p><strong>📍 Adresse :</strong> ${mission.client_address}</p>
     <p><strong>⏱️ Timer :</strong> 10 minutes de travail minimum démarré</p>
   </div>
-  <p>Ouvrez l'application pour consulter le rapport.</p>
+  <p>Ouvrez l'application pour consulter le pré-rapport.</p>
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
       });
-      this.logger.log(`Report submitted email sent for mission ${mission.id}`);
-    } catch (error) {
-      this.logger.error(`Failed to send report submitted email: ${error.message}`);
+
+      if (error) {
+        this.logger.error(`❌ Failed to send pre-report email: ${error.message}`);
+        throw new Error(`Failed to send email: ${error.message}`);
+      }
+
+      this.logger.log(`✅ Pre-report email sent for mission ${mission.id}. Message ID: ${data?.id}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send pre-report email: ${error.message}`);
+      throw error;
     }
   }
 
   async sendMissionCompletedEmail(mission: MissionData, recipientEmails: string[]): Promise<void> {
-    // Always include admin email
-    const recipients = [this.adminEmail];
-    if (recipientEmails && recipientEmails.length > 0) {
-      recipients.push(...recipientEmails.filter(email => email !== this.adminEmail));
+    if (!recipientEmails || recipientEmails.length === 0) {
+      this.logger.log(`No recipient emails provided for mission ${mission.id}, skipping completion email`);
+      return;
     }
-    
+
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
     try {
-      await this.resend.emails.send({
-        from: this.fromEmail,
-        to: recipients,
+      const { data, error } = await this.resend.emails.send({
+        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        to: recipientEmails,
         subject: `Mission terminée — ${clientName} — ${mission.client_address}`,
         html: `
 <!DOCTYPE html>
@@ -319,25 +326,31 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 </div>
 </body></html>`,
       });
-      this.logger.log(`Mission completed email sent for mission ${mission.id}`);
-    } catch (error) {
-      this.logger.error(`Failed to send mission completed email: ${error.message}`);
+
+      if (error) {
+        this.logger.error(`❌ Failed to send mission completed email: ${error.message}`);
+        throw new Error(`Failed to send email: ${error.message}`);
+      }
+
+      this.logger.log(`✅ Mission completed email sent for mission ${mission.id}. Message ID: ${data?.id}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send mission completed email: ${error.message}`);
+      throw error;
     }
   }
 
   async sendMissionCancelledEmail(mission: MissionData, workerEmails: string[]): Promise<void> {
-    // Always include admin email
-    const recipients = [this.adminEmail];
-    if (workerEmails && workerEmails.length > 0) {
-      recipients.push(...workerEmails.filter(email => email !== this.adminEmail));
+    if (!workerEmails || workerEmails.length === 0) {
+      this.logger.log(`No worker emails provided for mission ${mission.id}, skipping cancellation email`);
+      return;
     }
-    
+
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
     try {
-      await this.resend.emails.send({
-        from: this.fromEmail,
-        to: recipients,
+      const { data, error } = await this.resend.emails.send({
+        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        to: workerEmails,
         subject: `Mission annulée — ${clientName} — ${mission.client_address}`,
         html: `
 <!DOCTYPE html>
@@ -360,21 +373,30 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 </div>
 </body></html>`,
       });
-      this.logger.log(`Mission cancelled email sent for mission ${mission.id}`);
-    } catch (error) {
-      this.logger.error(`Failed to send mission cancelled email: ${error.message}`);
+
+      if (error) {
+        this.logger.error(`❌ Failed to send mission cancelled email: ${error.message}`);
+        throw new Error(`Failed to send email: ${error.message}`);
+      }
+
+      this.logger.log(`✅ Mission cancelled email sent for mission ${mission.id}. Message ID: ${data?.id}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send mission cancelled email: ${error.message}`);
+      throw error;
     }
   }
+
+  // Logger now defined at class level above
 
   async testConnection(): Promise<boolean> {
     try {
       this.logger.log('🔍 Testing Resend API connection...');
-      // Resend doesn't have a verify method, so we just check if the API key is set
-      if (this.resend) {
-        this.logger.log('✅ Resend API initialized successfully');
-        return true;
-      }
-      return false;
+      
+      // Test with a simple API call to domains endpoint
+      const domains = await this.resend.domains.list();
+      
+      this.logger.log('✅ Resend API connection successful');
+      return true;
     } catch (error: any) {
       this.logger.error(`❌ Resend API connection failed: ${error.message}`);
       return false;

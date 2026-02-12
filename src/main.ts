@@ -67,7 +67,7 @@ All endpoints require Bearer token authentication. Get a token by logging in via
 - Resend API (info@goboclean.be)
 - Automatic notifications for mission events
 - PDF reports generated and emailed on completion
-- All emails sent to emjisolutions@gmail.com and client email
+- All emails sent to roofrevive.be@gmail.com and client email
       `)
       .setVersion('1.0')
       .addBearerAuth({

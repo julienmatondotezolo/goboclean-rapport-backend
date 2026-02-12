@@ -27,7 +27,7 @@ export class EmailController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Send test email via Resend (admin only)' })
   async testSend(@Body() body: { to?: string; subject?: string }) {
-    const { to = 'emjisolutions@gmail.com', subject = 'Test Email from GoBo Clean' } = body;
+    const { to = 'roofrevive.be@gmail.com', subject = 'Test Email from GoBo Clean' } = body;
     
     try {
       const resend = (this.emailService as any).resend;

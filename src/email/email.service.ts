@@ -28,7 +28,7 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private resend: Resend;
   private readonly fromEmail: string;
-  private readonly adminEmail = 'emjisolutions@gmail.com';
+  private readonly adminEmail = 'roofrevive.be@gmail.com';
 
   constructor(private configService: ConfigService) {
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
@@ -48,7 +48,7 @@ export class EmailService {
   async sendReportEmail(params: SendReportEmailParams): Promise<void> {
     const { to, clientName, reportId, pdfBuffer, workerName, address } = params;
 
-    // Always send to admin email (emjisolutions@gmail.com) and client email
+    // Always send to admin email (roofrevive.be@gmail.com) and client email
     const recipients = [this.adminEmail];
     if (to && to !== this.adminEmail) {
       recipients.push(to);

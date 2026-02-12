@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 
 export interface SendReportEmailParams {
   to: string;
@@ -27,53 +26,55 @@ export interface MissionData {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: Transporter;
+  private resend: Resend;
+  private readonly fromEmail: string;
+  private readonly adminEmail = 'emjisolutions@gmail.com';
 
   constructor(private configService: ConfigService) {
-    const smtpHost = this.configService.get<string>('SMTP_HOST');
-    const smtpPort = this.configService.get<number>('SMTP_PORT');
-    const smtpUser = this.configService.get<string>('SMTP_USER');
-    const smtpPass = this.configService.get<string>('SMTP_PASSWORD');
+    const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
+    this.fromEmail = this.configService.get<string>('FROM_EMAIL') || 'info@goboclean.be';
     
-    this.logger.log(`🔧 Initializing SMTP transport: ${smtpUser}@${smtpHost}:${smtpPort}`);
+    if (!resendApiKey) {
+      this.logger.error('❌ RESEND_API_KEY is not configured');
+      throw new Error('RESEND_API_KEY is required');
+    }
     
-    this.transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
+    this.logger.log(`🔧 Initializing Resend with from email: ${this.fromEmail}`);
+    this.resend = new Resend(resendApiKey);
     
-    // Test connection on startup
-    this.testConnection();
+    this.logger.log('✅ Resend initialized successfully');
   }
 
   async sendReportEmail(params: SendReportEmailParams): Promise<void> {
     const { to, clientName, reportId, pdfBuffer, workerName, address } = params;
 
-    const mailOptions = {
-      from: this.configService.get<string>('SMTP_FROM'),
-      to,
-      subject: `Rapport d'intervention - Nettoyage de toiture`,
-      html: this.generateEmailTemplate(clientName, reportId, workerName, address),
-      attachments: [
-        {
-          filename: `Rapport-${reportId.slice(0, 8).toUpperCase()}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
-    };
+    // Always send to admin email (emjisolutions@gmail.com) and client email
+    const recipients = [this.adminEmail];
+    if (to && to !== this.adminEmail) {
+      recipients.push(to);
+    }
+
+    const pdfBase64 = pdfBuffer.toString('base64');
 
     try {
-      this.logger.log(`📧 Sending report email to ${to} for report ${reportId}`);
-      const result = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ Email sent successfully to ${to}. Message ID: ${result.messageId}`);
+      this.logger.log(`📧 Sending report email to ${recipients.join(', ')} for report ${reportId}`);
+      
+      const result = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: recipients,
+        subject: `Rapport d'intervention - Nettoyage de toiture`,
+        html: this.generateEmailTemplate(clientName, reportId, workerName, address),
+        attachments: [
+          {
+            filename: `Rapport-${reportId.slice(0, 8).toUpperCase()}.pdf`,
+            content: pdfBase64,
+          },
+        ],
+      });
+
+      this.logger.log(`✅ Email sent successfully to ${recipients.join(', ')}. Message ID: ${result.data?.id}`);
     } catch (error: any) {
-      this.logger.error(`❌ Error sending report email to ${to}: ${error.message}`);
+      this.logger.error(`❌ Error sending report email: ${error.message}`);
       throw new Error('Failed to send email');
     }
   }
@@ -197,18 +198,21 @@ export class EmailService {
       this.logger.log(`No worker emails provided for mission ${mission.id}, skipping assignment email`);
       return;
     }
-    const to = workerEmails;
+    
+    // Always include admin email
+    const recipients = [this.adminEmail, ...workerEmails];
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
     const appointmentDate = new Date(mission.appointment_time).toLocaleString('fr-BE', {
       dateStyle: 'full',
       timeStyle: 'short',
     });
 
-    const mailOptions = {
-      from: this.configService.get<string>('SMTP_FROM'),
-      to,
-      subject: `Nouvelle mission assignée — ${clientName}`,
-      html: `
+    try {
+      await this.resend.emails.send({
+        from: this.fromEmail,
+        to: recipients,
+        subject: `Nouvelle mission assignée — ${clientName}`,
+        html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
@@ -230,10 +234,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
+      });
       this.logger.log(`Mission assigned email sent for mission ${mission.id}`);
     } catch (error) {
       this.logger.error(`Failed to send mission assigned email: ${error.message}`);
@@ -241,18 +242,20 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   }
 
   async sendReportSubmittedEmail(mission: MissionData, adminEmails: string[]): Promise<void> {
-    if (!adminEmails || adminEmails.length === 0) {
-      this.logger.log(`No admin emails provided for mission ${mission.id}, skipping report submitted email`);
-      return;
+    // Always include admin email
+    const recipients = [this.adminEmail];
+    if (adminEmails && adminEmails.length > 0) {
+      recipients.push(...adminEmails.filter(email => email !== this.adminEmail));
     }
-    const to = adminEmails;
+    
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
-    const mailOptions = {
-      from: this.configService.get<string>('SMTP_FROM'),
-      to,
-      subject: `Rapport soumis — ${clientName} — ${mission.client_address}`,
-      html: `
+    try {
+      await this.resend.emails.send({
+        from: this.fromEmail,
+        to: recipients,
+        subject: `Rapport soumis — ${clientName} — ${mission.client_address}`,
+        html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
@@ -273,10 +276,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
+      });
       this.logger.log(`Report submitted email sent for mission ${mission.id}`);
     } catch (error) {
       this.logger.error(`Failed to send report submitted email: ${error.message}`);
@@ -284,18 +284,20 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   }
 
   async sendMissionCompletedEmail(mission: MissionData, recipientEmails: string[]): Promise<void> {
-    if (!recipientEmails || recipientEmails.length === 0) {
-      this.logger.log(`No recipient emails provided for mission ${mission.id}, skipping completion email`);
-      return;
+    // Always include admin email
+    const recipients = [this.adminEmail];
+    if (recipientEmails && recipientEmails.length > 0) {
+      recipients.push(...recipientEmails.filter(email => email !== this.adminEmail));
     }
-    const to = recipientEmails;
+    
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
-    const mailOptions = {
-      from: this.configService.get<string>('SMTP_FROM'),
-      to,
-      subject: `Mission terminée — ${clientName} — ${mission.client_address}`,
-      html: `
+    try {
+      await this.resend.emails.send({
+        from: this.fromEmail,
+        to: recipients,
+        subject: `Mission terminée — ${clientName} — ${mission.client_address}`,
+        html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
@@ -316,10 +318,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
+      });
       this.logger.log(`Mission completed email sent for mission ${mission.id}`);
     } catch (error) {
       this.logger.error(`Failed to send mission completed email: ${error.message}`);
@@ -327,18 +326,20 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   }
 
   async sendMissionCancelledEmail(mission: MissionData, workerEmails: string[]): Promise<void> {
-    if (!workerEmails || workerEmails.length === 0) {
-      this.logger.log(`No worker emails provided for mission ${mission.id}, skipping cancellation email`);
-      return;
+    // Always include admin email
+    const recipients = [this.adminEmail];
+    if (workerEmails && workerEmails.length > 0) {
+      recipients.push(...workerEmails.filter(email => email !== this.adminEmail));
     }
-    const to = workerEmails;
+    
     const clientName = `${mission.client_first_name} ${mission.client_last_name}`;
 
-    const mailOptions = {
-      from: this.configService.get<string>('SMTP_FROM'),
-      to,
-      subject: `Mission annulée — ${clientName} — ${mission.client_address}`,
-      html: `
+    try {
+      await this.resend.emails.send({
+        from: this.fromEmail,
+        to: recipients,
+        subject: `Mission annulée — ${clientName} — ${mission.client_address}`,
+        html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
@@ -358,26 +359,24 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
 </div>
 </body></html>`,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
+      });
       this.logger.log(`Mission cancelled email sent for mission ${mission.id}`);
     } catch (error) {
       this.logger.error(`Failed to send mission cancelled email: ${error.message}`);
     }
   }
 
-  // Logger now defined at class level above
-
   async testConnection(): Promise<boolean> {
     try {
-      this.logger.log('🔍 Testing SMTP connection...');
-      await this.transporter.verify();
-      this.logger.log('✅ SMTP connection successful');
-      return true;
+      this.logger.log('🔍 Testing Resend API connection...');
+      // Resend doesn't have a verify method, so we just check if the API key is set
+      if (this.resend) {
+        this.logger.log('✅ Resend API initialized successfully');
+        return true;
+      }
+      return false;
     } catch (error: any) {
-      this.logger.error(`❌ SMTP connection failed: ${error.message}`);
+      this.logger.error(`❌ Resend API connection failed: ${error.message}`);
       return false;
     }
   }

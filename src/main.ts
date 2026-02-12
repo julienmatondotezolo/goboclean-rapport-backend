@@ -64,9 +64,10 @@ All endpoints require Bearer token authentication. Get a token by logging in via
 - Mission responses include before_pictures and after_pictures arrays
 
 ## Email System  
-- SMTP via Combell (info@goboclean.be)
+- Resend API (info@goboclean.be)
 - Automatic notifications for mission events
 - PDF reports generated and emailed on completion
+- All emails sent to emjisolutions@gmail.com and client email
       `)
       .setVersion('1.0')
       .addBearerAuth({
@@ -110,7 +111,7 @@ All endpoints require Bearer token authentication. Get a token by logging in via
   }
   logger.log('🌍 CORS enabled for: ' + (process.env.FRONTEND_URL || 'http://localhost:3000'));
   logger.log('📊 Environment: ' + (process.env.NODE_ENV || 'development'));
-  logger.log('📧 SMTP: ' + (process.env.SMTP_USER || 'not configured'));
+  logger.log('📧 Email: Resend API ' + (process.env.RESEND_API_KEY ? '✅' : '❌ not configured'));
   logger.log('='.repeat(60));
 }
 

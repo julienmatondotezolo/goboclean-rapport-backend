@@ -15,7 +15,7 @@ import {
   ApiParam,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
+import { BackendAuthGuard} from '../auth/backend-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { NotificationsService } from './notifications.service';
 import { SubscribePushDto } from './dto/subscribe-push.dto';
@@ -23,7 +23,7 @@ import { UnsubscribePushDto } from './dto/unsubscribe-push.dto';
 
 @ApiTags('notifications')
 @Controller('notifications')
-@UseGuards(AuthGuard)
+@UseGuards(BackendAuthGuard)
 @ApiBearerAuth()
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}

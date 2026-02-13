@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  kinxplore-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: goboclean-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # Add your environment variables here or use env_file
+      # - RESEND_API_KEY=${RESEND_API_KEY}
+      # - FROM_EMAIL=${FROM_EMAIL}
+      # - FRONTEND_URL=${FRONTEND_URL}
+    # Alternative: Use env_file to load from .env
+    # env_file:
+    #   - .env
+    networks:
+      - goboclean-network
+
+networks:
+  goboclean-network:
+    driver: bridge

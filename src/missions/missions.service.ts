@@ -800,9 +800,11 @@ export class MissionsService {
     }
 
     // Generate PDF and send report email via ReportsService
+    let pdfBuffer: Buffer | undefined;
     if (report) {
       try {
-        await this.reportsService.generateAndSendReport(report.id);
+        const result = await this.reportsService.generateAndSendReport(report.id);
+        pdfBuffer = result.pdfBuffer;
         this.logger.log(`PDF generated and sent for report ${report.id}`);
       } catch (pdfError: any) {
         this.logger.error(`Failed to generate/send PDF for report ${report.id}: ${pdfError.message}`);
@@ -810,8 +812,8 @@ export class MissionsService {
       }
     }
 
-    // Notify admins + worker about completion
-    await this.notifyMissionCompleted(data);
+    // Notify admins + worker about completion (with PDF attachment)
+    await this.notifyMissionCompleted(data, pdfBuffer);
 
     this.logger.log(`Mission ${missionId} completed by worker ${userId}`);
 
@@ -1030,10 +1032,10 @@ export class MissionsService {
 
     // Send report email to actual admin emails
     const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
-    await this.emailService.sendReportSubmittedEmail(mission, adminEmails);
+    await this.emailService.sendPreReportEmail(mission, adminEmails);
   }
 
-  private async notifyMissionCompleted(mission: any) {
+  private async notifyMissionCompleted(mission: any, pdfBuffer?: Buffer) {
     const supabase = this.supabaseService.getClient();
 
     // Notify admins
@@ -1074,6 +1076,6 @@ export class MissionsService {
     if (mission.client_email) {
       recipientEmails.push(mission.client_email);
     }
-    await this.emailService.sendMissionCompletedEmail(mission, recipientEmails);
+    await this.emailService.sendMissionCompletedEmail(mission, recipientEmails, pdfBuffer);
   }
 }

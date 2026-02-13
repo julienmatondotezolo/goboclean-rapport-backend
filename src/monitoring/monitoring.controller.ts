@@ -1,12 +1,12 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { MonitoringService, UserActivity, ActivityLog } from './monitoring.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { BackendAuthGuard} from '../auth/backend-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
 
 @ApiTags('monitoring')
 @ApiBearerAuth()
-@UseGuards(AuthGuard, AdminGuard)
+@UseGuards(BackendAuthGuard, AdminGuard)
 @Controller('api/monitoring')
 export class MonitoringController {
   constructor(private readonly monitoringService: MonitoringService) {}

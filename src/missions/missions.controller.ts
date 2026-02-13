@@ -23,7 +23,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
+import { BackendAuthGuard} from '../auth/backend-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { MissionsService } from './missions.service';
@@ -37,7 +37,7 @@ import {
 
 @ApiTags('missions')
 @Controller('missions')
-@UseGuards(AuthGuard)
+@UseGuards(BackendAuthGuard)
 @ApiBearerAuth()
 export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}

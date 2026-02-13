@@ -1,12 +1,12 @@
 import { Controller, Post, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { BackendAuthGuard} from '../auth/backend-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
 @ApiTags('reports')
 @Controller('reports')
-@UseGuards(AuthGuard)
+@UseGuards(BackendAuthGuard)
 @ApiBearerAuth()
 export class ReportsController {
   constructor(private reportsService: ReportsService) {}

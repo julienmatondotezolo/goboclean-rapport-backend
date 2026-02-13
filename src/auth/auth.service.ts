@@ -1,12 +1,52 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { CustomJwtService, LoginCredentials, RegisterData } from './custom-jwt.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly customJwtService: CustomJwtService,
+  ) {}
 
-  // ❌ REMOVED: signup, login, refreshToken methods
-  // ✅ These are handled directly by Supabase on frontend
+  /**
+   * 🔑 NEW: Backend-controlled login with custom JWT
+   */
+  async login(credentials: LoginCredentials) {
+    return await this.customJwtService.login(credentials);
+  }
+
+  /**
+   * 🔑 NEW: Backend-controlled registration with custom JWT
+   */
+  async register(userData: RegisterData) {
+    return await this.customJwtService.register(userData);
+  }
+
+  /**
+   * 🔑 NEW: Logout user (token blacklist would go here in production)
+   */
+  async logout(userId: string) {
+    const supabase = this.supabaseService.getClient();
+    
+    try {
+      // Log logout activity
+      await supabase.from('user_activity').insert({
+        user_id: userId,
+        activity_type: 'logout',
+        user_agent: 'backend-jwt',
+        device_info: { backend_auth: true },
+      });
+
+      console.log('✅ AuthService: Logout logged for user:', userId);
+      
+      return { success: true, message: 'Logged out successfully' };
+    } catch (error) {
+      console.error('❌ AuthService: Logout error:', error);
+      // Don't fail logout for logging errors
+      return { success: true, message: 'Logged out successfully' };
+    }
+  }
 
   async getUserProfile(userId: string) {
     const supabase = this.supabaseService.getClient();

@@ -1,13 +1,13 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
+import { BackendAuthGuard} from '../auth/backend-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { MissionsService } from './missions.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @ApiTags('Admin')
 @Controller('admin/missions-test')
-@UseGuards(AuthGuard, AdminGuard)
+@UseGuards(BackendAuthGuard, AdminGuard)
 @ApiBearerAuth()
 export class MissionsTestController {
   constructor(

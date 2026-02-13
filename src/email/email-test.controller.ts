@@ -1,12 +1,12 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { EmailService } from './email.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { BackendAuthGuard} from '../auth/backend-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
 
 @ApiTags('Email')
 @Controller('email-test')
-@UseGuards(AuthGuard, AdminGuard)
+@UseGuards(BackendAuthGuard, AdminGuard)
 @ApiBearerAuth()
 export class EmailTestController {
   constructor(private readonly emailService: EmailService) {}

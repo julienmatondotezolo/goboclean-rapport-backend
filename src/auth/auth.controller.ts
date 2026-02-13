@@ -11,8 +11,10 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
-import { AuthGuard } from './auth.guard';
+import { BackendAuthGuard } from './backend-auth.guard';
+import { CustomJwtGuard } from './custom-jwt.guard';
 import { CurrentUser } from './current-user.decorator';
+import { LoginCredentials, RegisterData } from './custom-jwt.service';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('auth')
@@ -20,11 +22,37 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nes
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // ❌ REMOVED: signup, login, refresh endpoints
-  // ✅ These are handled directly by Supabase on frontend
+  /**
+   * 🔑 NEW: Backend login endpoint
+   */
+  @Post('login')
+  @ApiOperation({ summary: 'Login with email and password' })
+  async login(@Body() credentials: LoginCredentials) {
+    return await this.authService.login(credentials);
+  }
+
+  /**
+   * 🔑 NEW: Backend register endpoint
+   */
+  @Post('register')
+  @ApiOperation({ summary: 'Register new user' })
+  async register(@Body() userData: RegisterData) {
+    return await this.authService.register(userData);
+  }
+
+  /**
+   * 🔑 NEW: Backend logout endpoint
+   */
+  @Post('logout')
+  @UseGuards(CustomJwtGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout user' })
+  async logout(@CurrentUser() user: any) {
+    return await this.authService.logout(user.sub);
+  }
 
   @Get('me')
-  @UseGuards(AuthGuard)
+  @UseGuards(BackendAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   async getCurrentUser(@CurrentUser() user: any) {
@@ -32,7 +60,7 @@ export class AuthController {
   }
 
   @Post('onboarding')
-  @UseGuards(AuthGuard)
+  @UseGuards(BackendAuthGuard)
   @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('profilePicture'))
   @ApiConsumes('multipart/form-data')
@@ -74,7 +102,7 @@ export class AuthController {
   }
 
   @Put('profile/picture')
-  @UseGuards(AuthGuard)
+  @UseGuards(BackendAuthGuard)
   @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('profilePicture'))
   @ApiConsumes('multipart/form-data')
@@ -103,7 +131,7 @@ export class AuthController {
   }
 
   @Put('preferences')
-  @UseGuards(AuthGuard)
+  @UseGuards(BackendAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user preferences' })
   async updatePreferences(

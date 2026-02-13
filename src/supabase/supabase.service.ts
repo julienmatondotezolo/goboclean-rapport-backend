@@ -5,16 +5,27 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 @Injectable()
 export class SupabaseService {
   private supabase: SupabaseClient;
+  private clientSupabase: SupabaseClient;
 
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration');
     }
 
-    this.supabase = createClient(supabaseUrl, supabaseKey, {
+    // Service role client (admin operations)
+    this.supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Client-side operations (for password verification)
+    this.clientSupabase = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -24,6 +35,14 @@ export class SupabaseService {
 
   getClient(): SupabaseClient {
     return this.supabase;
+  }
+
+  getAdminClient(): SupabaseClient {
+    return this.supabase; // Service role client has admin privileges
+  }
+
+  getClientSupabase(): SupabaseClient {
+    return this.clientSupabase; // Client-side operations
   }
 
   async getReport(reportId: string) {

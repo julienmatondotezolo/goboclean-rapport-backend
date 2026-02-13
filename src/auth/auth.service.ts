@@ -222,4 +222,128 @@ export class AuthService {
       throw new BadRequestException(`Failed to update preferences: ${error.message}`);
     }
   }
+
+  async setPassword(userId: string, password: string) {
+    try {
+      // Password validation
+      if (password.length < 8) {
+        throw new BadRequestException('Password must be at least 8 characters long');
+      }
+
+      if (!/[A-Z]/.test(password)) {
+        throw new BadRequestException('Password must contain at least one uppercase letter');
+      }
+
+      if (!/[a-z]/.test(password)) {
+        throw new BadRequestException('Password must contain at least one lowercase letter');
+      }
+
+      if (!/[0-9]/.test(password)) {
+        throw new BadRequestException('Password must contain at least one number');
+      }
+
+      // Use Supabase Admin API to update user password
+      const adminClient = this.supabaseService.getAdminClient();
+      
+      const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
+        password: password,
+      });
+
+      if (updateError) {
+        throw new BadRequestException(`Failed to set password: ${updateError.message}`);
+      }
+
+      // Log user activity
+      const supabase = this.supabaseService.getClient();
+      await supabase.from('user_activity').insert({
+        user_id: userId,
+        activity_type: 'password_set',
+        user_agent: 'password-setup',
+        device_info: { action: 'set_password' },
+      });
+
+      return {
+        success: true,
+        message: 'Password set successfully',
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Failed to set password: ${error.message}`);
+    }
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    try {
+      // New password validation
+      if (newPassword.length < 8) {
+        throw new BadRequestException('New password must be at least 8 characters long');
+      }
+
+      if (!/[A-Z]/.test(newPassword)) {
+        throw new BadRequestException('New password must contain at least one uppercase letter');
+      }
+
+      if (!/[a-z]/.test(newPassword)) {
+        throw new BadRequestException('New password must contain at least one lowercase letter');
+      }
+
+      if (!/[0-9]/.test(newPassword)) {
+        throw new BadRequestException('New password must contain at least one number');
+      }
+
+      // First, verify current password by getting user email and trying to sign in
+      const supabase = this.supabaseService.getClient();
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !userData) {
+        throw new BadRequestException('User not found');
+      }
+
+      // Verify current password
+      const clientSupabase = this.supabaseService.getClientSupabase();
+      const { error: signInError } = await clientSupabase.auth.signInWithPassword({
+        email: userData.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        throw new BadRequestException('Current password is incorrect');
+      }
+
+      // Use Supabase Admin API to update user password
+      const adminClient = this.supabaseService.getAdminClient();
+      
+      const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
+        password: newPassword,
+      });
+
+      if (updateError) {
+        throw new BadRequestException(`Failed to change password: ${updateError.message}`);
+      }
+
+      // Log user activity
+      await supabase.from('user_activity').insert({
+        user_id: userId,
+        activity_type: 'password_changed',
+        user_agent: 'password-change',
+        device_info: { action: 'change_password' },
+      });
+
+      return {
+        success: true,
+        message: 'Password changed successfully',
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Failed to change password: ${error.message}`);
+    }
+  }
 }

@@ -6,7 +6,6 @@ import { AuthService } from './auth.service';
 import { BackendAuthGuard } from './backend-auth.guard';
 import { AdminGuard } from './admin.guard';
 import { CustomJwtService } from './custom-jwt.service';
-import { CustomJwtGuard } from './custom-jwt.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 @Global()
@@ -25,7 +24,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, BackendAuthGuard, AdminGuard, CustomJwtService, CustomJwtGuard],
-  exports: [AuthService, BackendAuthGuard, AdminGuard, CustomJwtService, CustomJwtGuard],
+  providers: [AuthService, BackendAuthGuard, AdminGuard, CustomJwtService],
+  exports: [AuthService, BackendAuthGuard, AdminGuard, CustomJwtService],
 })
 export class AuthModule {}

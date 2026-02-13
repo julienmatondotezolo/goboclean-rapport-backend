@@ -12,7 +12,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { BackendAuthGuard } from './backend-auth.guard';
-import { CustomJwtGuard } from './custom-jwt.guard';
 import { CurrentUser } from './current-user.decorator';
 import { LoginCredentials, RegisterData } from './custom-jwt.service';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -44,7 +43,7 @@ export class AuthController {
    * 🔑 NEW: Backend logout endpoint
    */
   @Post('logout')
-  @UseGuards(CustomJwtGuard)
+  @UseGuards(BackendAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout user' })
   async logout(@CurrentUser() user: any) {

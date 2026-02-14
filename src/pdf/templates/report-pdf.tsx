@@ -289,7 +289,7 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.logoSection}>
-              <Image src="/Users/emji/.openclaw/workspace/goboclean-backend/assets/goboclean-logo.png" style={styles.logo} />
+              <Image src="https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/goboclean-logo.png" style={styles.logo} />
               <View>
                 <Text style={styles.companyName}>GoBo solutions</Text>
                 <Text style={styles.companyTagline}>Professional Cleaning</Text>

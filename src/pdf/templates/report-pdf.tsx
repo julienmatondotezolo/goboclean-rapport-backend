@@ -155,6 +155,28 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
     return levels[level] || level;
   };
 
+  const getMissionTypeLabel = (type: string) => {
+    const types = {
+      roof: 'Nettoyage de toiture',
+      facade: 'Nettoyage de façade',
+      gutter: 'Nettoyage de gouttières',
+      terrace: 'Nettoyage de terrasse',
+      other: 'Autre',
+    };
+    return types[type] || type;
+  };
+
+  const getMissionSubtypeLabel = (subtype: string) => {
+    const subtypes = {
+      cleaning: 'Nettoyage',
+      coating: 'Protection/traitement',
+      repair: 'Réparation',
+      inspection: 'Inspection',
+      maintenance: 'Entretien',
+    };
+    return subtypes[subtype] || subtype;
+  };
+
   const beforePhotos = report.photos.filter((p) => p.type === 'before');
   const afterPhotos = report.photos.filter((p) => p.type === 'after');
 
@@ -220,6 +242,53 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
             <Text style={styles.label}>Niveau de mousse:</Text>
             <Text style={styles.value}>{getMossLevelLabel(report.moss_level)}</Text>
           </View>
+        </View>
+
+        {/* Mission Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Détails de la Mission</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Type de mission:</Text>
+            <Text style={styles.value}>{getMissionTypeLabel(report.mission_type)}</Text>
+          </View>
+          {report.mission_subtypes && report.mission_subtypes.length > 0 && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Services:</Text>
+              <Text style={styles.value}>
+                {report.mission_subtypes.map(getMissionSubtypeLabel).join(', ')}
+              </Text>
+            </View>
+          )}
+          {report.appointment_time && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Rendez-vous prévu:</Text>
+              <Text style={styles.value}>{formatDateTime(report.appointment_time)}</Text>
+            </View>
+          )}
+          {report.started_at && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Heure de début:</Text>
+              <Text style={styles.value}>{formatDateTime(report.started_at)}</Text>
+            </View>
+          )}
+          {report.completed_at && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Heure de fin:</Text>
+              <Text style={styles.value}>{formatDateTime(report.completed_at)}</Text>
+            </View>
+          )}
+          {report.surface_area && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Surface traitée:</Text>
+              <Text style={styles.value}>{report.surface_area} m²</Text>
+            </View>
+          )}
+          {report.additional_info && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Description:</Text>
+              <Text style={styles.value}>{report.additional_info}</Text>
+            </View>
+          )}
         </View>
 
         {/* Worker Info */}

@@ -28,6 +28,13 @@ export interface ReportData {
   }[];
   created_at: string;
   completed_at?: string;
+  // Mission details
+  mission_type?: string;
+  mission_subtypes?: string[];
+  appointment_time?: string;
+  started_at?: string;
+  surface_area?: number;
+  additional_info?: string;
 }
 
 export interface CompanySettings {

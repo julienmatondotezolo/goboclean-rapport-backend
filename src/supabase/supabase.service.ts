@@ -63,6 +63,25 @@ export class SupabaseService {
 
     if (error) throw error;
     
+    // Get mission data associated with this report
+    if (data) {
+      const { data: missionData, error: missionError } = await this.supabase
+        .from('missions')
+        .select('mission_type, mission_subtypes, appointment_time, started_at, completed_at, surface_area, additional_info')
+        .eq('report_id', reportId)
+        .single();
+        
+      if (!missionError && missionData) {
+        // Merge mission data into report data
+        data.mission_type = missionData.mission_type;
+        data.mission_subtypes = missionData.mission_subtypes;
+        data.appointment_time = missionData.appointment_time;
+        data.started_at = missionData.started_at;
+        data.surface_area = missionData.surface_area;
+        data.additional_info = missionData.additional_info;
+      }
+    }
+    
     // Transform pdf_url: if it's an empty JSON object string or invalid, set to null
     if (data && data.pdf_url) {
       try {

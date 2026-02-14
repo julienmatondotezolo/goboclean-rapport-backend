@@ -356,7 +356,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       const { data, error } = await this.resend.emails.send({
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: recipientEmails,
-        subject: `Goboclean Mail: Mission terminée — ${clientName} — ${mission.client_address}`,
+        subject: `Goboclean Rapport: Mission terminée — ${clientName} — #${mission.id.slice(0, 8).toUpperCase()}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -482,6 +482,182 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     } catch (error: any) {
       this.logger.error(`❌ Resend API connection failed: ${error.message}`);
       return false;
+    }
+  }
+
+  async sendTestCompletionEmail(recipientEmail: string): Promise<void> {
+    this.logger.log(`📧 Sending test completion email to ${recipientEmail}`);
+
+    // Create test mission data
+    const testMission = {
+      id: 'a1b2c3d4-test-mission-id',
+      client_first_name: 'Jean',
+      client_last_name: 'Dupont',
+      client_email: recipientEmail,
+      client_address: 'Rue des Fleurs 123, 1000 Bruxelles',
+      client_phone: '+32 2 123 45 67',
+      appointment_time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+      mission_subtypes: ['cleaning'],
+    };
+
+    // Create test PDF content (simple placeholder)
+    const testPdfContent = Buffer.from(`%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 100
+>>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(Test Goboclean Rapport - Mission terminée) Tj
+0 -20 Td
+(Client: Jean Dupont) Tj
+0 -20 Td
+(Mission ID: #A1B2C3D4) Tj
+0 -20 Td
+(Adresse: Rue des Fleurs 123, 1000 Bruxelles) Tj
+ET
+endstream
+endobj
+
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Times-Roman
+>>
+endobj
+
+xref
+0 6
+0000000000 65535 f 
+0000000015 00000 n 
+0000000066 00000 n 
+0000000123 00000 n 
+0000000281 00000 n 
+0000000533 00000 n 
+trailer
+<<
+/Size 6
+/Root 1 0 R
+>>
+startxref
+615
+%%EOF`);
+
+    const attachments = [{
+      filename: `Rapport-A1B2C3D4.pdf`,
+      content: testPdfContent,
+    }];
+
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
+        to: [recipientEmail],
+        subject: `Goboclean Rapport: Mission terminée — Jean Dupont — #A1B2C3D4`,
+        attachments,
+        html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
+.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
+.info{background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin:16px 0}
+.logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
+</style></head><body>
+<div class="header">
+  <div class="logo">
+    <div style="position:relative;transform:scale(0.75);margin-right:15px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#a3e635">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      </svg>
+      <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#a3e635;font-size:18px">G</span>
+    </div>
+    <div>
+      <h1 style="margin:0;font-size:28px">GoBo Clean</h1>
+      <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <h2 style="color:#064e3b;margin-top:0">🎯 Test - Mission terminée</h2>
+  
+  <div class="info">
+    <h3 style="margin-top:0;color:#16a34a">✅ Mission complétée avec succès</h3>
+    <p style="margin-bottom:0"><strong>Client:</strong> Jean Dupont<br>
+    <strong>Adresse:</strong> Rue des Fleurs 123, 1000 Bruxelles<br>
+    <strong>Mission ID:</strong> #A1B2C3D4<br>
+    <strong>Type:</strong> Test de rapport PDF</p>
+  </div>
+
+  <h3>📋 Résumé de la mission</h3>
+  <p>Ceci est un test du système de rapport automatique de Goboclean.</p>
+  
+  <ul>
+    <li><strong>Début:</strong> Il y a 4 heures</li>
+    <li><strong>Fin:</strong> Test en cours</li>
+    <li><strong>Technicien:</strong> Équipe de test</li>
+    <li><strong>Services:</strong> Nettoyage de test</li>
+  </ul>
+
+  <h3>📎 Documents joints</h3>
+  <p>Le rapport complet PDF est joint à cet email avec toutes les photos et signatures.</p>
+
+  <div style="background:#f8fafc;padding:16px;border-radius:6px;margin:20px 0;text-align:center">
+    <p style="margin:0;color:#475569"><strong>📧 Email de test envoyé avec succès!</strong><br>
+    Format: Goboclean Rapport: Mission terminée — Jean Dupont — #A1B2C3D4</p>
+  </div>
+</div>
+
+<div style="background:#f8fafc;padding:20px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb">
+  <p style="margin:0;color:#64748b;font-size:14px">
+    <strong>GoBo Clean</strong> | Nettoyage professionnel<br>
+    📧 rapport@goboclean.be | 📞 +32 56 25 63 83
+  </p>
+</div>
+</body></html>`,
+      });
+
+      if (error) {
+        this.logger.error(`❌ Failed to send test email: ${error.message}`);
+        throw error;
+      }
+
+      this.logger.log(`✅ Test completion email sent to ${recipientEmail}. Message ID: ${data?.id}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send test completion email: ${error.message}`);
+      throw error;
     }
   }
 }

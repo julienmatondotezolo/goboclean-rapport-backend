@@ -221,7 +221,8 @@ export class NotificationsService {
     missionId?: string,
   ) {
     if (!this.vapidConfigured) {
-      this.logger.warn('Skipping push notification — VAPID not configured');
+      // VAPID not configured - skip push notification silently
+      // (Warning already logged during service initialization)
       return;
     }
 

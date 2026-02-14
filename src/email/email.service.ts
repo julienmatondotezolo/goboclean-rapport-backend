@@ -501,92 +501,88 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   async sendTestCompletionEmail(recipientEmail: string): Promise<void> {
     this.logger.log(`📧 Sending test completion email to ${recipientEmail}`);
 
-    // Create test mission data
-    const testMission = {
-      id: 'a1b2c3d4-test-mission-id',
+    // Create realistic test report data that matches the PDF template structure
+    const testReportData = {
+      id: 'a1b2c3d4-test-report-id',
+      worker: {
+        first_name: 'Marc',
+        last_name: 'Janssens',
+      },
       client_first_name: 'Jean',
       client_last_name: 'Dupont',
-      client_email: recipientEmail,
       client_address: 'Rue des Fleurs 123, 1000 Bruxelles',
       client_phone: '+32 2 123 45 67',
-      appointment_time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+      mission_type: 'roof',
       mission_subtypes: ['cleaning'],
+      appointment_time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+      started_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+      completed_at: new Date().toISOString(),
+      surface_area: 95,
+      additional_info: 'Test standard roof cleaning service for demonstration',
+      photos: [
+        {
+          id: '1',
+          type: 'before' as const,
+          url: 'https://via.placeholder.com/400x300/064e3b/a3e635?text=BEFORE+PHOTO+1',
+          order: 1,
+        },
+        {
+          id: '2', 
+          type: 'before' as const,
+          url: 'https://via.placeholder.com/400x300/064e3b/a3e635?text=BEFORE+PHOTO+2',
+          order: 2,
+        },
+        {
+          id: '3',
+          type: 'after' as const,
+          url: 'https://via.placeholder.com/400x300/a3e635/064e3b?text=AFTER+PHOTO+1',
+          order: 1,
+        },
+        {
+          id: '4',
+          type: 'after' as const,
+          url: 'https://via.placeholder.com/400x300/a3e635/064e3b?text=AFTER+PHOTO+2', 
+          order: 2,
+        },
+      ],
+      worker_signature_url: 'https://via.placeholder.com/200x100/000000/ffffff?text=Worker+Signature',
+      client_signature_url: 'https://via.placeholder.com/200x100/000000/ffffff?text=Client+Signature',
+      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+      roof_type: 'concrete',
+      roof_surface: 95,
+      moss_level: 'medium',
+      comments: 'Test cleaning completed successfully. All areas thoroughly cleaned and inspected.',
     };
 
-    // Create test PDF content (simple placeholder)
-    const testPdfContent = Buffer.from(`%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
+    // Create test company data
+    const testCompany = {
+      company_name: 'GoBo solutions',
+      company_email: 'info@goboclean.be',
+      company_phone: '+32 56 25 63 83',
+      company_address: 'Professional Cleaning Services',
+      logo_url: '/Users/emji/.openclaw/workspace/goboclean-backend/assets/goboclean-logo.png',
+      legal_mentions: 'Professional cleaning services - Licensed and insured',
+    };
 
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
-/Resources <<
-/Font <<
-/F1 5 0 R
->>
->>
->>
-endobj
-
-4 0 obj
-<<
-/Length 100
->>
-stream
-BT
-/F1 12 Tf
-72 720 Td
-(Test Goboclean Rapport - Mission terminée) Tj
-0 -20 Td
-(Client: Jean Dupont) Tj
-0 -20 Td
-(Mission ID: #A1B2C3D4) Tj
-0 -20 Td
-(Adresse: Rue des Fleurs 123, 1000 Bruxelles) Tj
-ET
-endstream
-endobj
-
-5 0 obj
-<<
-/Type /Font
-/Subtype /Type1
-/BaseFont /Times-Roman
->>
-endobj
-
-xref
-0 6
-0000000000 65535 f 
-0000000015 00000 n 
-0000000066 00000 n 
-0000000123 00000 n 
-0000000281 00000 n 
-0000000533 00000 n 
-trailer
-<<
-/Size 6
-/Root 1 0 R
->>
-startxref
-615
-%%EOF`);
+    // Generate actual PDF using the PDF service
+    let testPdfContent: Buffer;
+    try {
+      const { PdfService } = await import('../pdf/pdf.service');
+      const pdfService = new PdfService();
+      testPdfContent = await pdfService.generateReportPDF(testReportData, testCompany);
+      this.logger.log('✅ Generated test PDF using report template');
+    } catch (pdfError) {
+      this.logger.error(`❌ Failed to generate PDF: ${pdfError.message}`);
+      // Fallback to simple PDF if template fails
+      testPdfContent = Buffer.from(`%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj  
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R>>endobj
+4 0 obj<</Length 44>>stream
+BT /F1 12 Tf 72 720 Td (PDF Generation Failed) Tj ET
+endstream endobj
+xref 0 5 0000000000 65535 f 0000000015 00000 n 0000000066 00000 n 0000000123 00000 n 0000000281 00000 n trailer<</Size 5/Root 1 0 R>>startxref 350 %%EOF`);
+    }
 
     const attachments = [{
       filename: `Rapport-A1B2C3D4.pdf`,

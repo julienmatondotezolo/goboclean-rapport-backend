@@ -98,7 +98,7 @@ export class SupabaseService {
         }
         // If pdf_url exists and is not a full URL, construct it
         else if (data.pdf_url && !data.pdf_url.startsWith('http')) {
-          data.pdf_url = this.getPublicUrl('pdfs', data.pdf_url);
+          data.pdf_url = this.getPublicUrl('roof-photos', data.pdf_url);
         }
       } catch (e) {
         // If parsing fails, keep the original value or set to null if it looks like invalid JSON
@@ -151,7 +151,7 @@ export class SupabaseService {
             }
             // If pdf_url exists and is not a full URL, construct it
             else if (report.pdf_url && !report.pdf_url.startsWith('http')) {
-              report.pdf_url = this.getPublicUrl('pdfs', report.pdf_url);
+              report.pdf_url = this.getPublicUrl('roof-photos', report.pdf_url);
             }
           } catch (e) {
             // If parsing fails, keep the original value or set to null if it looks like invalid JSON

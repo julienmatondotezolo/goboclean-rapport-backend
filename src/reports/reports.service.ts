@@ -45,10 +45,10 @@ export class ReportsService {
     const pdfBuffer = await this.pdfService.generateReportPDF(reportData, company);
 
     // 5. Upload PDF to Supabase Storage
-    const pdfPath = `${reportId}/report.pdf`;
-    await this.supabaseService.uploadFile('pdfs', pdfPath, pdfBuffer, 'application/pdf');
+    const pdfPath = `reports/${reportId}/report.pdf`;
+    await this.supabaseService.uploadFile('roof-photos', pdfPath, pdfBuffer, 'application/pdf');
     
-    const pdfUrl = await this.supabaseService.getPublicUrl('pdfs', pdfPath);
+    const pdfUrl = await this.supabaseService.getPublicUrl('roof-photos', pdfPath);
 
     // 6. Update report with PDF URL
     await this.supabaseService.updateReport(reportId, {
@@ -123,10 +123,10 @@ export class ReportsService {
     const pdfBuffer = await this.pdfService.generateReportPDF(reportData, company);
 
     // 5. Upload PDF to Supabase Storage
-    const pdfPath = `${reportId}/report.pdf`;
-    await this.supabaseService.uploadFile('pdfs', pdfPath, pdfBuffer, 'application/pdf');
+    const pdfPath = `reports/${reportId}/report.pdf`;
+    await this.supabaseService.uploadFile('roof-photos', pdfPath, pdfBuffer, 'application/pdf');
     
-    const pdfUrl = await this.supabaseService.getPublicUrl('pdfs', pdfPath);
+    const pdfUrl = await this.supabaseService.getPublicUrl('roof-photos', pdfPath);
 
     // 6. Update report with PDF URL
     await this.supabaseService.updateReport(reportId, {

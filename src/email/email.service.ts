@@ -352,14 +352,8 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     // Prepare attachments
     const attachments = [];
     
-    // Always include the Goboclean logo
-    let logoBase64: string = '';
-    try {
-      const logoBuffer = require('fs').readFileSync('/Users/emji/.openclaw/workspace/goboclean-backend/assets/goboclean-logo.png');
-      logoBase64 = logoBuffer.toString('base64');
-    } catch (logoError) {
-      this.logger.warn('Could not load Goboclean logo for email');
-    }
+    // Use Goboclean logo from Supabase
+    const logoUrl = 'https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/goboclean-logo.png';
     
     if (pdfBuffer) {
       attachments.push({
@@ -386,7 +380,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 </style></head><body>
 <div class="header">
   <div class="logo">
-    <img src="data:image/png;base64,${logoBase64}" alt="GoBo Clean" class="goboclean-logo">
+    <img src="${logoUrl}" alt="GoBo Clean" class="goboclean-logo">
     <div>
       <h1 style="margin:0;font-size:28px;color:#a3e635">GoBo Clean</h1>
       <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>
@@ -589,14 +583,8 @@ xref 0 5 0000000000 65535 f 0000000015 00000 n 0000000066 00000 n 0000000123 000
       content: testPdfContent,
     }];
 
-    // Add Goboclean logo as base64
-    let logoBase64: string = '';
-    try {
-      const logoBuffer = require('fs').readFileSync('/Users/emji/.openclaw/workspace/goboclean-backend/assets/goboclean-logo.png');
-      logoBase64 = logoBuffer.toString('base64');
-    } catch (logoError) {
-      this.logger.warn('Could not load Goboclean logo for test email');
-    }
+    // Use Goboclean logo from Supabase
+    const logoUrl = 'https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/goboclean-logo.png';
 
     try {
       const { data, error } = await this.resend.emails.send({
@@ -616,7 +604,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 </style></head><body>
 <div class="header">
   <div class="logo">
-    <img src="data:image/png;base64,${logoBase64}" alt="GoBo Clean" class="goboclean-logo">
+    <img src="${logoUrl}" alt="GoBo Clean" class="goboclean-logo">
     <div>
       <h1 style="margin:0;font-size:28px;color:#a3e635">GoBo Clean</h1>
       <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>

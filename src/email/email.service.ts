@@ -50,9 +50,9 @@ export class EmailService {
       this.logger.log(`📧 Sending report email to ${to} for report ${reportId}`);
       
       const { data, error } = await this.resend.emails.send({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: [to],
-        subject: `Rapport d'intervention - Nettoyage de toiture`,
+        subject: `Goboclean Mail: Rapport d'intervention - Nettoyage de toiture`,
         html: this.generateEmailTemplate(clientName, reportId, workerName, address),
         attachments: [
           {
@@ -96,11 +96,17 @@ export class EmailService {
       padding: 20px;
     }
     .header {
-      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
       color: white;
       padding: 30px;
       text-align: center;
       border-radius: 10px 10px 0 0;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
     }
     .content {
       background: #ffffff;
@@ -109,14 +115,14 @@ export class EmailService {
       border-top: none;
     }
     .info-box {
-      background: #f0f9ff;
-      border-left: 4px solid #0ea5e9;
+      background: #f0fdf4;
+      border-left: 4px solid #064e3b;
       padding: 15px;
       margin: 20px 0;
     }
     .button {
       display: inline-block;
-      background: #0ea5e9;
+      background: #064e3b;
       color: white;
       padding: 12px 30px;
       text-decoration: none;
@@ -136,8 +142,18 @@ export class EmailService {
 </head>
 <body>
   <div class="header">
-    <h1 style="margin: 0;">GoBo Clean</h1>
-    <p style="margin: 10px 0 0 0;">Rapport d'intervention</p>
+    <div class="logo">
+      <div style="position: relative; transform: scale(0.75); margin-right: 15px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #a3e635;">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        </svg>
+        <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: #a3e635; font-size: 18px;">G</span>
+      </div>
+      <div>
+        <h1 style="margin: 0; font-size: 28px;">GoBo Clean</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Rapport d'intervention</p>
+      </div>
+    </div>
   </div>
   
   <div class="content">
@@ -204,18 +220,32 @@ export class EmailService {
       this.logger.log(`📧 Sending mission assigned email for mission ${mission.id} to ${workerEmails.join(', ')}`);
       
       const { data, error } = await this.resend.emails.send({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: workerEmails,
-        subject: `Nouvelle mission assignée — ${clientName}`,
+        subject: `Goboclean Mail: Nouvelle mission assignée — ${clientName}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
-.info{background:#f0fdf4;border-left:4px solid #064e3b;padding:12px;margin:16px 0}
+.info{background:#f0fdf4;border-left:4px solid:#064e3b;padding:12px;margin:16px 0}
+.logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
 </style></head><body>
-<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Nouvelle mission</p></div>
+<div class="header">
+  <div class="logo">
+    <div style="position:relative;transform:scale(0.75);margin-right:15px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#a3e635">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      </svg>
+      <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#a3e635;font-size:18px">G</span>
+    </div>
+    <div>
+      <h1 style="margin:0;font-size:28px">GoBo Clean</h1>
+      <p style="margin:5px 0 0;opacity:0.9">Nouvelle mission</p>
+    </div>
+  </div>
+</div>
 <div class="content">
   <h2>Mission assignée</h2>
   <p>Une nouvelle mission vous a été assignée :</p>
@@ -253,9 +283,9 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 
     try {
       const { data, error } = await this.resend.emails.send({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: adminEmails,
-        subject: `Pré-rapport soumis — ${clientName} — ${mission.client_address}`,
+        subject: `Goboclean Mail: Pré-rapport soumis — ${clientName} — ${mission.client_address}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -263,8 +293,22 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin:16px 0}
+.logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
 </style></head><body>
-<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Pré-rapport</p></div>
+<div class="header">
+  <div class="logo">
+    <div style="position:relative;transform:scale(0.75);margin-right:15px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#a3e635">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      </svg>
+      <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#a3e635;font-size:18px">G</span>
+    </div>
+    <div>
+      <h1 style="margin:0;font-size:28px">GoBo Clean</h1>
+      <p style="margin:5px 0 0;opacity:0.9">Pré-rapport</p>
+    </div>
+  </div>
+</div>
 <div class="content">
   <h2>Photos "avant" soumises</h2>
   <p>Les photos avant-intervention ont été soumises pour la mission suivante :</p>
@@ -310,9 +354,9 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 
     try {
       const { data, error } = await this.resend.emails.send({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: recipientEmails,
-        subject: `Mission terminée — ${clientName} — ${mission.client_address}`,
+        subject: `Goboclean Mail: Mission terminée — ${clientName} — ${mission.client_address}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -320,8 +364,22 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin:16px 0}
+.logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
 </style></head><body>
-<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Mission terminée ✅</p></div>
+<div class="header">
+  <div class="logo">
+    <div style="position:relative;transform:scale(0.75);margin-right:15px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#a3e635">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      </svg>
+      <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#a3e635;font-size:18px">G</span>
+    </div>
+    <div>
+      <h1 style="margin:0;font-size:28px">GoBo Clean</h1>
+      <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>
+    </div>
+  </div>
+</div>
 <div class="content">
   <h2>Mission complétée avec succès</h2>
   <p>La mission suivante a été terminée :</p>
@@ -359,9 +417,9 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 
     try {
       const { data, error } = await this.resend.emails.send({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+        from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: workerEmails,
-        subject: `Mission annulée — ${clientName} — ${mission.client_address}`,
+        subject: `Goboclean Mail: Mission annulée — ${clientName} — ${mission.client_address}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -369,8 +427,22 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .header{background:#991b1b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#fef2f2;border-left:4px solid #dc2626;padding:12px;margin:16px 0}
+.logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
 </style></head><body>
-<div class="header"><h1 style="margin:0">GoBo Clean</h1><p style="margin:8px 0 0">Mission annulée</p></div>
+<div class="header">
+  <div class="logo">
+    <div style="position:relative;transform:scale(0.75);margin-right:15px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#a3e635">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      </svg>
+      <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#a3e635;font-size:18px">G</span>
+    </div>
+    <div>
+      <h1 style="margin:0;font-size:28px">GoBo Clean</h1>
+      <p style="margin:5px 0 0;opacity:0.9">Mission annulée</p>
+    </div>
+  </div>
+</div>
 <div class="content">
   <h2>Mission annulée</h2>
   <p>La mission suivante a été annulée :</p>

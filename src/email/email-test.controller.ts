@@ -25,18 +25,20 @@ export class EmailTestController {
   @ApiResponse({ status: 200, description: 'Test email sent successfully' })
   @ApiResponse({ status: 400, description: 'Invalid email or sending failed' })
   async sendTestCompletionEmail(@Body() dto: SendTestEmailDto) {
-    this.logger.log(`🚀 Sending test completion email to ${dto.email}`);
+    const testRecipient = 'emjisolutions@gmail.com';
+    this.logger.log(`🚀 Sending test completion email to ${testRecipient} (original request: ${dto.email})`);
 
     try {
-      await this.emailService.sendTestCompletionEmail(dto.email);
+      await this.emailService.sendTestCompletionEmail(testRecipient);
       
       return {
         success: true,
-        message: `Test completion email sent to ${dto.email}`,
+        message: `Test completion email sent to ${testRecipient}`,
         details: {
           subject_format: 'Goboclean Rapport: Mission terminée — Jean Dupont — #A1B2C3D4',
           attachment: 'Rapport-A1B2C3D4.pdf',
-          recipient: dto.email,
+          recipient: testRecipient,
+          note: `Always sends to emjisolutions@gmail.com for testing (requested: ${dto.email})`,
         },
       };
     } catch (error: any) {

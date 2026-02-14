@@ -351,6 +351,16 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     
     // Prepare attachments
     const attachments = [];
+    
+    // Always include the Goboclean logo
+    let logoBase64: string = '';
+    try {
+      const logoBuffer = require('fs').readFileSync('/Users/emji/.openclaw/workspace/goboclean-backend/assets/goboclean-logo.png');
+      logoBase64 = logoBuffer.toString('base64');
+    } catch (logoError) {
+      this.logger.warn('Could not load Goboclean logo for email');
+    }
+    
     if (pdfBuffer) {
       attachments.push({
         filename: `Rapport-${mission.id.slice(0, 8).toUpperCase()}.pdf`,
@@ -363,6 +373,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: allRecipients,
         subject: `Goboclean Rapport: Mission terminée — ${clientName} — #${mission.id.slice(0, 8).toUpperCase()}`,
+        attachments,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -371,17 +382,13 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin:16px 0}
 .logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
+.goboclean-logo{width:60px;height:60px;margin-right:15px;border-radius:12px}
 </style></head><body>
 <div class="header">
   <div class="logo">
-    <div style="position:relative;transform:scale(0.75);margin-right:15px">
-      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#a3e635">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-      </svg>
-      <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#a3e635;font-size:18px">G</span>
-    </div>
+    <img src="data:image/png;base64,${logoBase64}" alt="GoBo Clean" class="goboclean-logo">
     <div>
-      <h1 style="margin:0;font-size:28px">GoBo Clean</h1>
+      <h1 style="margin:0;font-size:28px;color:#a3e635">GoBo Clean</h1>
       <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>
     </div>
   </div>
@@ -586,6 +593,15 @@ startxref
       content: testPdfContent,
     }];
 
+    // Add Goboclean logo as base64
+    let logoBase64: string = '';
+    try {
+      const logoBuffer = require('fs').readFileSync('/Users/emji/.openclaw/workspace/goboclean-backend/assets/goboclean-logo.png');
+      logoBase64 = logoBuffer.toString('base64');
+    } catch (logoError) {
+      this.logger.warn('Could not load Goboclean logo for test email');
+    }
+
     try {
       const { data, error } = await this.resend.emails.send({
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
@@ -600,17 +616,13 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin:16px 0}
 .logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
+.goboclean-logo{width:60px;height:60px;margin-right:15px;border-radius:12px}
 </style></head><body>
 <div class="header">
   <div class="logo">
-    <div style="position:relative;transform:scale(0.75);margin-right:15px">
-      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#a3e635">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-      </svg>
-      <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#a3e635;font-size:18px">G</span>
-    </div>
+    <img src="data:image/png;base64,${logoBase64}" alt="GoBo Clean" class="goboclean-logo">
     <div>
-      <h1 style="margin:0;font-size:28px">GoBo Clean</h1>
+      <h1 style="margin:0;font-size:28px;color:#a3e635">GoBo Clean</h1>
       <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>
     </div>
   </div>

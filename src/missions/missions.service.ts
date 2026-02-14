@@ -801,11 +801,13 @@ export class MissionsService {
 
     // Generate PDF and send report email via ReportsService
     let pdfBuffer: Buffer | undefined;
+    let pdfUrl: string | null = null;
     if (report) {
       try {
         const result = await this.reportsService.generateAndSendReport(report.id);
         pdfBuffer = result.pdfBuffer;
-        this.logger.log(`PDF generated and sent for report ${report.id}`);
+        pdfUrl = result.pdfUrl;
+        this.logger.log(`PDF generated and sent for report ${report.id}, URL: ${pdfUrl}`);
       } catch (pdfError: any) {
         this.logger.error(`Failed to generate/send PDF for report ${report.id}: ${pdfError.message}`);
         // Don't fail the mission completion if PDF generation fails — it can be retried
@@ -823,6 +825,7 @@ export class MissionsService {
       report_id: report?.id || null,
       worker_signature_url: workerSignatureUrl,
       client_signature_url: clientSignatureUrl,
+      pdf_url: pdfUrl,
     };
   }
 

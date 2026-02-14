@@ -336,7 +336,13 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
   }
 
   async sendMissionCompletedEmail(mission: MissionData, recipientEmails: string[], pdfBuffer?: Buffer): Promise<void> {
-    if (!recipientEmails || recipientEmails.length === 0) {
+    // Always include roofrevive.be@gmail.com in completion emails
+    const allRecipients = [...(recipientEmails || [])];
+    if (!allRecipients.includes('roofrevive.be@gmail.com')) {
+      allRecipients.push('roofrevive.be@gmail.com');
+    }
+
+    if (allRecipients.length === 0) {
       this.logger.log(`No recipient emails provided for mission ${mission.id}, skipping completion email`);
       return;
     }
@@ -355,7 +361,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     try {
       const { data, error } = await this.resend.emails.send({
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
-        to: recipientEmails,
+        to: allRecipients,
         subject: `Goboclean Rapport: Mission terminée — ${clientName} — #${mission.id.slice(0, 8).toUpperCase()}`,
         html: `
 <!DOCTYPE html>

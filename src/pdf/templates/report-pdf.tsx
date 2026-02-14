@@ -13,110 +13,212 @@ import { fr } from 'date-fns/locale';
 
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    padding: 30,
     fontSize: 11,
     fontFamily: 'Helvetica',
+    color: '#000000',
   },
   header: {
+    backgroundColor: '#064e3b',
+    color: '#ffffff',
+    padding: 20,
+    marginBottom: 0,
+    marginLeft: -30,
+    marginRight: -30,
+    marginTop: -30,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
-    paddingBottom: 20,
-    borderBottom: '2 solid #0ea5e9',
+    alignItems: 'center',
+    paddingLeft: 30,
+    paddingRight: 30,
+  },
+  logoSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
+    marginRight: 15,
   },
-  companyInfo: {
-    textAlign: 'right',
-    fontSize: 10,
-  },
-  title: {
+  companyName: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#0ea5e9',
+    color: '#a3e635',
+  },
+  companyTagline: {
+    fontSize: 12,
+    color: '#ffffff',
+    marginTop: 2,
+  },
+  reportInfo: {
+    textAlign: 'right',
+    fontSize: 10,
+    color: '#ffffff',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 25,
+    marginBottom: 25,
+    color: '#000000',
+    textAlign: 'center',
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 25,
+    backgroundColor: '#ffffff',
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#1e40af',
-    backgroundColor: '#e0f2fe',
-    padding: 8,
+    marginBottom: 15,
+    color: '#064e3b',
+    backgroundColor: '#a3e635',
+    padding: 10,
+    marginLeft: -30,
+    marginRight: -30,
+    paddingLeft: 30,
+    paddingRight: 30,
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
+    paddingLeft: 30,
+    paddingRight: 30,
   },
   label: {
-    width: '40%',
+    width: '35%',
     fontWeight: 'bold',
+    color: '#000000',
   },
   value: {
-    width: '60%',
+    width: '65%',
+    color: '#000000',
   },
   photosGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 15,
+    paddingLeft: 30,
+    paddingRight: 30,
   },
   photoContainer: {
     width: '48%',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   photoLabel: {
-    fontSize: 9,
-    marginBottom: 4,
+    fontSize: 10,
+    marginBottom: 6,
     fontWeight: 'bold',
-    color: '#6b7280',
+    color: '#064e3b',
+    backgroundColor: '#a3e635',
+    padding: 5,
+    textAlign: 'center',
   },
   photo: {
     width: '100%',
-    height: 150,
+    height: 180,
     objectFit: 'cover',
-    border: '1 solid #e5e7eb',
+    border: '2 solid #064e3b',
+  },
+  signaturesSection: {
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+    marginTop: 30,
+    marginLeft: -30,
+    marginRight: -30,
+    borderTop: '3 solid #a3e635',
   },
   signatureContainer: {
     width: '48%',
+    backgroundColor: '#ffffff',
+    padding: 15,
+    border: '1 solid #e5e7eb',
   },
   signatureLabel: {
-    fontSize: 10,
-    marginBottom: 4,
+    fontSize: 12,
+    marginBottom: 8,
     fontWeight: 'bold',
+    color: '#064e3b',
+    textAlign: 'center',
   },
   signature: {
     width: '100%',
-    height: 80,
-    border: '1 solid #d1d5db',
-    backgroundColor: '#f9fafb',
+    height: 100,
+    border: '1 solid #064e3b',
+    backgroundColor: '#ffffff',
+    objectFit: 'contain',
   },
   signaturesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    paddingLeft: 30,
+    paddingRight: 30,
   },
   footer: {
-    position: 'absolute',
-    bottom: 30,
-    left: 40,
-    right: 40,
+    backgroundColor: '#064e3b',
+    color: '#ffffff',
+    padding: 15,
+    marginTop: 30,
+    marginLeft: -30,
+    marginRight: -30,
+    marginBottom: -30,
     textAlign: 'center',
-    fontSize: 8,
-    color: '#6b7280',
-    borderTop: '1 solid #e5e7eb',
-    paddingTop: 10,
+    fontSize: 9,
+  },
+  emergencySection: {
+    backgroundColor: '#064e3b',
+    color: '#ffffff',
+    padding: 15,
+    marginTop: 20,
+    marginLeft: -30,
+    marginRight: -30,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  emergencyLeft: {
+    paddingLeft: 30,
+  },
+  emergencyRight: {
+    backgroundColor: '#a3e635',
+    color: '#064e3b',
+    padding: 15,
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   comments: {
-    backgroundColor: '#f9fafb',
-    padding: 10,
-    borderLeft: '3 solid #0ea5e9',
-    fontSize: 10,
-    lineHeight: 1.5,
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderLeft: '4 solid #a3e635',
+    fontSize: 11,
+    lineHeight: 1.4,
+    marginLeft: -30,
+    marginRight: -30,
+    paddingLeft: 45,
+    paddingRight: 30,
+    color: '#000000',
+  },
+  interventionHeader: {
+    backgroundColor: '#064e3b',
+    color: '#ffffff',
+    padding: 25,
+    marginTop: 20,
+    marginLeft: -30,
+    marginRight: -30,
+    textAlign: 'center',
+  },
+  interventionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#a3e635',
+  },
+  interventionSubtitle: {
+    fontSize: 14,
+    color: '#ffffff',
+    marginTop: 5,
   },
 });
 
@@ -185,27 +287,25 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Rapport d'Intervention</Text>
-            <Text>Nettoyage de toiture</Text>
-            <Text style={{ marginTop: 5, fontSize: 10, color: '#6b7280' }}>
-              Rapport N° {report.id.slice(0, 8).toUpperCase()}
-            </Text>
-            <Text style={{ fontSize: 10, color: '#6b7280' }}>
-              Date: {formatDate(report.completed_at || report.created_at)}
-            </Text>
+          <View style={styles.headerContent}>
+            <View style={styles.logoSection}>
+              <Image src="/Users/emji/.openclaw/workspace/goboclean-backend/assets/goboclean-logo.png" style={styles.logo} />
+              <View>
+                <Text style={styles.companyName}>GoBo solutions</Text>
+                <Text style={styles.companyTagline}>Professional Cleaning</Text>
+              </View>
+            </View>
+            <View style={styles.reportInfo}>
+              <Text>Rapport N° {report.id.slice(0, 8).toUpperCase()}</Text>
+              <Text>{formatDate(report.completed_at || report.created_at)}</Text>
+            </View>
           </View>
-          <View style={styles.companyInfo}>
-            {company.logo_url && (
-              <Image src={company.logo_url} style={styles.logo} />
-            )}
-            <Text style={{ fontWeight: 'bold', marginTop: 10 }}>
-              {company.company_name}
-            </Text>
-            <Text>{company.company_address}</Text>
-            <Text>{company.company_phone}</Text>
-            <Text>{company.company_email}</Text>
-          </View>
+        </View>
+
+        {/* Intervention Header */}
+        <View style={styles.interventionHeader}>
+          <Text style={styles.interventionTitle}>INTERVENTION REPORT</Text>
+          <Text style={styles.interventionSubtitle}>Power & Precision in Industrial Cleaning</Text>
         </View>
 
         {/* Client Information */}
@@ -338,45 +438,67 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
           </View>
         </View>
 
-        {/* Signatures */}
-        <View style={styles.section} break>
-          <Text style={styles.sectionTitle}>Signatures - Bon pour Accord</Text>
+        {/* Signatures Section */}
+        <View style={styles.signaturesSection}>
+          <Text style={styles.sectionTitle}>Authorization & Sign Off</Text>
           <View style={styles.signaturesRow}>
             <View style={styles.signatureContainer}>
-              <Text style={styles.signatureLabel}>Signature du Technicien</Text>
-              {report.worker_signature_url && (
+              <Text style={styles.signatureLabel}>Technicien Signature</Text>
+              {report.worker_signature_url ? (
                 <Image src={report.worker_signature_url} style={styles.signature} />
+              ) : (
+                <View style={styles.signature}>
+                  <Text style={{ fontSize: 9, color: '#888', textAlign: 'center', paddingTop: 40 }}>
+                    No signature available
+                  </Text>
+                </View>
               )}
-              {report.worker_signature_date && (
-                <Text style={{ fontSize: 8, marginTop: 4, color: '#6b7280' }}>
-                  Signé le {formatDateTime(report.worker_signature_date)}
-                </Text>
-              )}
+              <Text style={{ fontSize: 8, marginTop: 6, color: '#064e3b', textAlign: 'center' }}>
+                {report.worker ? `${report.worker.first_name} ${report.worker.last_name}` : 'Worker'}
+              </Text>
             </View>
             <View style={styles.signatureContainer}>
-              <Text style={styles.signatureLabel}>Signature du Client</Text>
-              {report.client_signature_url && (
+              <Text style={styles.signatureLabel}>Client Signature</Text>
+              {report.client_signature_url ? (
                 <Image src={report.client_signature_url} style={styles.signature} />
+              ) : (
+                <View style={styles.signature}>
+                  <Text style={{ fontSize: 9, color: '#888', textAlign: 'center', paddingTop: 40 }}>
+                    No signature available
+                  </Text>
+                </View>
               )}
-              {report.client_signature_date && (
-                <Text style={{ fontSize: 8, marginTop: 4, color: '#6b7280' }}>
-                  Signé le {formatDateTime(report.client_signature_date)}
-                </Text>
-              )}
+              <Text style={{ fontSize: 8, marginTop: 6, color: '#064e3b', textAlign: 'center' }}>
+                {report.client_first_name} {report.client_last_name}
+              </Text>
             </View>
           </View>
-          <Text style={{ fontSize: 9, marginTop: 15, color: '#6b7280', textAlign: 'center' }}>
-            Le client certifie avoir pris connaissance des travaux effectués et accepte la prestation réalisée.
+          <Text style={{ fontSize: 10, marginTop: 15, color: '#000', textAlign: 'center', paddingLeft: 30, paddingRight: 30 }}>
+            Customer self-effective to our topnotch 
           </Text>
+        </View>
+
+        {/* Emergency Response Section */}
+        <View style={styles.emergencySection}>
+          <View style={styles.emergencyLeft}>
+            <Text style={{ fontSize: 12, fontWeight: 'bold' }}>24/7 Emergency Response</Text>
+            <Text style={{ fontSize: 9, marginTop: 2 }}>
+              Hotline call +32-456-789-012 
+            </Text>
+            <Text style={{ fontSize: 9 }}>Service Solutions 24h/24</Text>
+          </View>
+          <View style={styles.emergencyRight}>
+            <Text>Service Solutions 24h/24</Text>
+          </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          {company.legal_mentions && <Text>{company.legal_mentions}</Text>}
-          <Text style={{ marginTop: 5 }}>
-            {company.company_name} - {company.company_email} - {company.company_phone}
+          <Text>GoBo solutions - Professional Cleaning Services</Text>
+          <Text style={{ marginTop: 3 }}>
+            Email: info@goboclean.be | Phone: +32 56 25 63 83
           </Text>
-          <Text style={{ marginTop: 2 }}>
+          <Text style={{ marginTop: 3, fontSize: 8 }}>
             Document généré le {formatDateTime(new Date().toISOString())}
           </Text>
         </View>

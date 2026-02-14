@@ -25,7 +25,7 @@ export class ReportsService {
     // 3. Get public URLs for photos
     const photosWithUrls = await Promise.all(
       report.photos.map(async (photo) => {
-        const url = this.supabaseService.getPublicUrl('roof-photos', photo.storage_path);
+        const url = await this.supabaseService.getPublicUrl('roof-photos', photo.storage_path);
         return {
           ...photo,
           url,
@@ -48,7 +48,7 @@ export class ReportsService {
     const pdfPath = `${reportId}/report.pdf`;
     await this.supabaseService.uploadFile('pdfs', pdfPath, pdfBuffer, 'application/pdf');
     
-    const pdfUrl = this.supabaseService.getPublicUrl('pdfs', pdfPath);
+    const pdfUrl = await this.supabaseService.getPublicUrl('pdfs', pdfPath);
 
     // 6. Update report with PDF URL
     await this.supabaseService.updateReport(reportId, {
@@ -103,7 +103,7 @@ export class ReportsService {
     // 3. Get public URLs for photos
     const photosWithUrls = await Promise.all(
       report.photos.map(async (photo) => {
-        const url = this.supabaseService.getPublicUrl('roof-photos', photo.storage_path);
+        const url = await this.supabaseService.getPublicUrl('roof-photos', photo.storage_path);
         return {
           ...photo,
           url,
@@ -126,7 +126,7 @@ export class ReportsService {
     const pdfPath = `${reportId}/report.pdf`;
     await this.supabaseService.uploadFile('pdfs', pdfPath, pdfBuffer, 'application/pdf');
     
-    const pdfUrl = this.supabaseService.getPublicUrl('pdfs', pdfPath);
+    const pdfUrl = await this.supabaseService.getPublicUrl('pdfs', pdfPath);
 
     // 6. Update report with PDF URL
     await this.supabaseService.updateReport(reportId, {

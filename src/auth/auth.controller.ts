@@ -144,4 +144,34 @@ export class AuthController {
   ) {
     return this.authService.updatePreferences(user.id, preferences);
   }
+
+  @Put('set-password')
+  @UseGuards(BackendAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Set password for new user (first-time setup)' })
+  async setPassword(
+    @CurrentUser() user: any,
+    @Body() body: { password: string },
+  ) {
+    if (!body.password) {
+      throw new BadRequestException('Password is required');
+    }
+
+    return this.authService.setPassword(user.id, body.password);
+  }
+
+  @Put('change-password')
+  @UseGuards(BackendAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change password for existing user' })
+  async changePassword(
+    @CurrentUser() user: any,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    if (!body.currentPassword || !body.newPassword) {
+      throw new BadRequestException('Current password and new password are required');
+    }
+
+    return this.authService.changePassword(user.id, body.currentPassword, body.newPassword);
+  }
 }

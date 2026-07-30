@@ -1,0 +1,9 @@
+#!/bin/sh
+# Règle stricte (Julien, 30/07/2026) : JAMAIS de push si le build ne passe pas.
+echo "🔒 pre-push : typecheck + build..."
+npm run build || {
+  echo ""
+  echo "❌ BUILD CASSÉ — push refusé. Corrige le build avant de pusher."
+  exit 1
+}
+echo "✅ Build OK — push autorisé."

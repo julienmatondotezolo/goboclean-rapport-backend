@@ -33,6 +33,7 @@ import {
   AssignWorkersDto,
   RescheduleMissionDto,
   CalendarQueryDto,
+  RecordPaymentDto,
 } from './dto';
 
 @ApiTags('missions')
@@ -261,6 +262,25 @@ export class MissionsController {
         fuelStateRaw,
       },
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /missions/:id/payment — Record payment + send bon d'exécution (admin)
+  // -------------------------------------------------------------------------
+  @Post(':id/payment')
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: "Record client payment and send the bon d'exécution (report PDF) to the client (admin only)",
+  })
+  @ApiParam({ name: 'id', description: 'Mission UUID' })
+  @ApiResponse({ status: 200, description: "Payment recorded, bon d'exécution sent" })
+  @ApiResponse({ status: 400, description: 'Mission not completed or payment already recorded' })
+  async recordPayment(
+    @Param('id') id: string,
+    @Body() dto: RecordPaymentDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.missionsService.recordPayment(id, dto, user.id);
   }
 
   // -------------------------------------------------------------------------

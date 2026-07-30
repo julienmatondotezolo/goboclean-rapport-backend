@@ -3,3 +3,4 @@ export { UpdateMissionDto } from './update-mission.dto';
 export { AssignWorkersDto } from './assign-workers.dto';
 export { RescheduleMissionDto } from './reschedule-mission.dto';
 export { CalendarQueryDto } from './calendar-query.dto';
+export { RecordPaymentDto } from './record-payment.dto';

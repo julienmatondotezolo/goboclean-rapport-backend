@@ -922,6 +922,92 @@ export class MissionsService {
   }
 
   // ---------------------------------------------------------------------------
+  // PAYMENT (admin) — Lot 3 : enregistre le paiement et envoie le bon
+  // d'exécution (PDF du rapport) au client. Règle d'Ali : le bon part au
+  // paiement, jamais à la signature/complétion.
+  // ---------------------------------------------------------------------------
+  async recordPayment(
+    missionId: string,
+    dto: { method: string; amount?: number },
+    adminUserId: string,
+  ) {
+    const mission = await this.getMissionRaw(missionId);
+
+    if (mission.status !== 'completed') {
+      throw new BadRequestException(
+        `Cannot record payment for a "${mission.status}" mission — it must be completed first.`,
+      );
+    }
+    if (mission.payment) {
+      throw new BadRequestException(
+        `Payment already recorded on ${mission.payment.received_at} (${mission.payment.method}).`,
+      );
+    }
+
+    const payment = {
+      method: dto.method,
+      amount: dto.amount ?? null,
+      received_at: new Date().toISOString(),
+      recorded_by: adminUserId,
+    };
+
+    // Envoi du bon d'exécution au client (PDF déjà généré à la complétion)
+    let bonSentAt: string | null = null;
+    let bonWarning: string | null = null;
+    if (!mission.client_email) {
+      bonWarning = 'No client email on the mission — payment recorded but no bon sent.';
+    } else if (!mission.report_id) {
+      bonWarning = 'No report linked to the mission — payment recorded but no bon sent.';
+    } else {
+      const supabase = this.supabaseService.getClient();
+      const { data: report } = await supabase
+        .from('reports')
+        .select('id, pdf_url')
+        .eq('id', mission.report_id)
+        .single();
+
+      if (!report?.pdf_url) {
+        bonWarning = 'Report PDF not available — payment recorded but no bon sent.';
+      } else {
+        const res = await fetch(report.pdf_url);
+        if (!res.ok) {
+          bonWarning = `Could not download report PDF (${res.status}) — payment recorded but no bon sent.`;
+        } else {
+          const pdfBuffer = Buffer.from(await res.arrayBuffer());
+          await this.emailService.sendReportEmail({
+            to: mission.client_email,
+            clientName: `${mission.client_first_name} ${mission.client_last_name}`,
+            reportId: report.id,
+            pdfBuffer,
+            workerName: 'Roof Revive - Gobo Clean',
+            address: mission.client_address,
+          });
+          bonSentAt = new Date().toISOString();
+        }
+      }
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('missions')
+      .update({ payment, bon_sent_at: bonSentAt })
+      .eq('id', missionId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to record payment: ${error.message}`);
+    }
+
+    this.logger.log(
+      `💰 Payment recorded for mission ${missionId} (${dto.method}${dto.amount ? `, ${dto.amount} €` : ''})` +
+        (bonSentAt ? ` — bon sent to ${mission.client_email}` : ` — ${bonWarning}`),
+    );
+
+    return { mission: data, bon_sent: !!bonSentAt, warning: bonWarning };
+  }
+
+  // ---------------------------------------------------------------------------
   // RESCHEDULE (admin) — FIX 7: Block rescheduling active missions
   // ---------------------------------------------------------------------------
   async rescheduleMission(missionId: string, dto: RescheduleMissionDto) {
@@ -984,7 +1070,20 @@ export class MissionsService {
       closureChecklistRaw?: string;
       fuelStateRaw?: string;
     },
-  ): { checklist: Record<string, boolean>; fuelState: FuelState } {
+  ): { checklist: Record<string, boolean> | null; fuelState: FuelState | null } {
+    // Transition : tant que la nouvelle PWA (étape Clôture) n'est pas déployée,
+    // CLOSURE_ENFORCEMENT=off laisse passer les anciennes tablettes qui
+    // n'envoient aucun champ de clôture. À retirer une fois Vercel réparé.
+    if (
+      process.env.CLOSURE_ENFORCEMENT === 'off' &&
+      !closure?.closureChecklistRaw &&
+      !closure?.materialPhotos?.length &&
+      !closure?.fuelPhoto
+    ) {
+      this.logger.warn('CLOSURE_ENFORCEMENT=off — completion accepted without closure (legacy PWA)');
+      return { checklist: null, fuelState: null };
+    }
+
     // Checklist — tous les points doivent être cochés
     let checklist: Record<string, boolean>;
     try {
@@ -1252,13 +1351,12 @@ export class MissionsService {
       }
     }
 
-    // FIX 2: Send completion email to admins + workers + client
+    // Lot 3 (Ali) : le CLIENT ne reçoit plus rien à la complétion — le bon
+    // d'exécution part à l'enregistrement du paiement (recordPayment).
+    // Ici : admins + ouvriers uniquement.
     const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
     const workerEmails = await this.resolveWorkerEmails(mission.assigned_workers || []);
     const recipientEmails = [...new Set([...adminEmails, ...workerEmails])];
-    if (mission.client_email) {
-      recipientEmails.push(mission.client_email);
-    }
     await this.emailService.sendMissionCompletedEmail(mission, recipientEmails, pdfBuffer);
   }
 }

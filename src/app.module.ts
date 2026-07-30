@@ -9,6 +9,8 @@ import { EmailModule } from './email/email.module';
 import { AdminModule } from './admin/admin.module';
 import { MissionsModule } from './missions/missions.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { StockModule } from './stock/stock.module';
+import { SalaryModule } from './salary/salary.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ServiceLoggerService } from './common/services/service-logger.service';
@@ -27,6 +29,8 @@ import { ServiceLoggerService } from './common/services/service-logger.service';
     MissionsModule,
     NotificationsModule,
     MonitoringModule,
+    StockModule,
+    SalaryModule,
   ],
   providers: [
     {

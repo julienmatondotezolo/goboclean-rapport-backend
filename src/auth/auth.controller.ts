@@ -12,6 +12,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { BackendAuthGuard } from './backend-auth.guard';
+import { AdminGuard } from './admin.guard';
 import { CurrentUser } from './current-user.decorator';
 import { LoginCredentials, RegisterData } from './custom-jwt.service';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -31,10 +32,13 @@ export class AuthController {
   }
 
   /**
-   * 🔑 NEW: Backend register endpoint
+   * Création de compte — ADMIN UNIQUEMENT. L'endpoint était public : n'importe
+   * qui pouvait se créer un compte admin (corrigé le 30/07/2026).
    */
   @Post('register')
-  @ApiOperation({ summary: 'Register new user' })
+  @UseGuards(BackendAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register new user (admin only)' })
   async register(@Body() userData: RegisterData) {
     return await this.authService.register(userData);
   }

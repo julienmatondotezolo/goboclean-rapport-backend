@@ -9,6 +9,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { EQUIPMENT_CATALOG } from './equipment.catalog';
+import { CLOSURE_CHECKLIST_IDS, FUEL_EQUIPMENT, FUEL_LEVELS, FuelState } from './closure.catalog';
 import { ServiceLoggerService } from '../common/services/service-logger.service';
 import { ReportsService } from '../reports/reports.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
@@ -646,10 +647,20 @@ export class MissionsService {
     files: Express.Multer.File[],
     workerSignature?: Express.Multer.File,
     clientSignature?: Express.Multer.File,
+    closure?: {
+      materialPhotos: Express.Multer.File[];
+      fuelPhoto?: Express.Multer.File;
+      closureChecklistRaw?: string;
+      fuelStateRaw?: string;
+    },
   ) {
     const mission = await this.getMissionRaw(missionId);
 
     this.assertWorkerIsAssigned(mission, userId);
+
+    // Clôture bloquante (règles d'Ali) : checklist complète + photos matériel
+    // + état essence/kilométrage + photo — sinon la mission ne peut pas être clôturée.
+    const { checklist, fuelState } = this.validateClosure(mission, closure);
 
     if (mission.status !== 'waiting_completion') {
       throw new BadRequestException(
@@ -716,6 +727,23 @@ export class MissionsService {
       const sigPath = `missions/${missionId}/signatures/client.png`;
       await this.supabaseService.uploadFile('signatures', sigPath, clientSignature.buffer, clientSignature.mimetype);
       clientSignatureUrl = await this.supabaseService.getPublicUrl('signatures', sigPath);
+    }
+
+    // Upload closure photos (material cleaned + fuel gauge)
+    const closurePhotos: { type: 'material' | 'fuel'; storagePath: string; url: string }[] = [];
+    const closureFiles: { type: 'material' | 'fuel'; file: Express.Multer.File }[] = [
+      ...(closure?.materialPhotos ?? []).map((file) => ({ type: 'material' as const, file })),
+      ...(closure?.fuelPhoto ? [{ type: 'fuel' as const, file: closure.fuelPhoto }] : []),
+    ];
+    for (let i = 0; i < closureFiles.length; i++) {
+      const { type, file } = closureFiles[i];
+      if (!file.mimetype.startsWith('image/'))
+        throw new BadRequestException('Only image files are allowed');
+      if (file.size > 10 * 1024 * 1024) throw new BadRequestException('Maximum file size is 10MB');
+      const storagePath = `missions/${missionId}/${type}/${Date.now()}_${i}.${file.originalname.split('.').pop() || 'jpg'}`;
+      await this.supabaseService.uploadFile('roof-photos', storagePath, file.buffer, file.mimetype);
+      const url = await this.supabaseService.getPublicUrl('roof-photos', storagePath);
+      closurePhotos.push({ type, storagePath, url });
     }
 
     const supabase = this.supabaseService.getClient();
@@ -791,10 +819,29 @@ export class MissionsService {
       this.logger.warn(`⚠️ No report available, skipping photo database records`);
     }
 
+    // Insert closure photos (material/fuel) linked to the report
+    if (report && closurePhotos.length > 0) {
+      for (let i = 0; i < closurePhotos.length; i++) {
+        const { type, storagePath, url } = closurePhotos[i];
+        const { error: photoError } = await supabase.from('photos').insert({
+          report_id: report.id,
+          type,
+          storage_path: storagePath,
+          url,
+          order: i + 1,
+        });
+        if (photoError) {
+          this.logger.error(`❌ Failed to save ${type} photo: ${photoError.message}`);
+        }
+      }
+    }
+
     // Update mission status to completed
     const updateData: any = {
       status: 'completed',
       completed_at: new Date().toISOString(),
+      closure_checklist: checklist,
+      fuel_state: fuelState,
     };
 
     if (report) {
@@ -924,6 +971,71 @@ export class MissionsService {
   // ---------------------------------------------------------------------------
   // HELPERS
   // ---------------------------------------------------------------------------
+
+  /**
+   * Clôture bloquante (lot 2 — Ali) : valide checklist + photos + essence.
+   * Retourne les objets parsés à stocker sur la mission.
+   */
+  private validateClosure(
+    mission: any,
+    closure?: {
+      materialPhotos: Express.Multer.File[];
+      fuelPhoto?: Express.Multer.File;
+      closureChecklistRaw?: string;
+      fuelStateRaw?: string;
+    },
+  ): { checklist: Record<string, boolean>; fuelState: FuelState } {
+    // Checklist — tous les points doivent être cochés
+    let checklist: Record<string, boolean>;
+    try {
+      checklist = JSON.parse(closure?.closureChecklistRaw || '{}');
+    } catch {
+      throw new BadRequestException('closure_checklist must be valid JSON');
+    }
+    const missing = CLOSURE_CHECKLIST_IDS.filter((id) => checklist[id] !== true);
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Closure checklist incomplete — missing: ${missing.join(', ')}. All items must be checked before closing.`,
+      );
+    }
+
+    // Photos du matériel nettoyé — au moins une
+    if (!closure?.materialPhotos?.length) {
+      throw new BadRequestException(
+        'At least one photo of the cleaned material (camionnette/machine) is required to close the mission.',
+      );
+    }
+
+    // État essence + kilométrage + photo
+    if (!closure.fuelPhoto) {
+      throw new BadRequestException('A photo of the fuel gauge / odometer is required to close the mission.');
+    }
+    let fuelState: FuelState;
+    try {
+      fuelState = JSON.parse(closure.fuelStateRaw || '{}');
+    } catch {
+      throw new BadRequestException('fuel_state must be valid JSON');
+    }
+    if (typeof fuelState.mileage_km !== 'number' || fuelState.mileage_km < 0) {
+      throw new BadRequestException('fuel_state.mileage_km (kilométrage camionnette) is required.');
+    }
+    fuelState.levels = fuelState.levels || {};
+    for (const [eq, level] of Object.entries(fuelState.levels)) {
+      if (!FUEL_LEVELS.includes(level as any)) {
+        throw new BadRequestException(`Invalid fuel level "${level}" for ${eq} (expected: ${FUEL_LEVELS.join('/')})`);
+      }
+    }
+    // Chaque machine à réservoir de la mission doit avoir son niveau
+    const requiredFuel = (mission.equipment ?? []).filter((e: string) => FUEL_EQUIPMENT.includes(e));
+    const missingFuel = requiredFuel.filter((e: string) => !fuelState.levels[e]);
+    if (missingFuel.length > 0) {
+      throw new BadRequestException(
+        `Fuel level missing for: ${missingFuel.join(', ')} (plein/moitie/vide required for each machine used).`,
+      );
+    }
+
+    return { checklist, fuelState };
+  }
 
   /**
    * Règle d'Ali : jamais deux équipes sur la même machine le même jour

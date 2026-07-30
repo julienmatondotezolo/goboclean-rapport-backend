@@ -195,10 +195,15 @@ export class MissionsController {
       { name: 'photos', maxCount: 10 },
       { name: 'worker_signature', maxCount: 1 },
       { name: 'client_signature', maxCount: 1 },
+      { name: 'material_photos', maxCount: 10 },
+      { name: 'fuel_photo', maxCount: 1 },
     ]),
   )
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Complete mission with after-pictures + signatures' })
+  @ApiOperation({
+    summary:
+      'Complete mission with after-pictures + signatures + blocking closure (checklist, material photos, fuel state)',
+  })
   @ApiParam({ name: 'id', description: 'Mission UUID' })
   @ApiBody({
     schema: {
@@ -210,6 +215,21 @@ export class MissionsController {
         },
         worker_signature: { type: 'string', format: 'binary' },
         client_signature: { type: 'string', format: 'binary' },
+        material_photos: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Photos of cleaned material (camionnette, machine) — at least one required',
+        },
+        fuel_photo: { type: 'string', format: 'binary', description: 'Photo of the fuel gauge / odometer' },
+        closure_checklist: {
+          type: 'string',
+          description:
+            'JSON {nettoyage_client, toit_rince, panneaux_nettoyes, hydrofuge_applique, dibo_rince, camionnette_nettoyee} — all must be true',
+        },
+        fuel_state: {
+          type: 'string',
+          description: 'JSON { levels: {<equipment_id>: plein|moitie|vide}, mileage_km: number }',
+        },
       },
     },
   })
@@ -217,11 +237,15 @@ export class MissionsController {
   async completeMission(
     @Param('id') id: string,
     @CurrentUser() user: any,
+    @Body('closure_checklist') closureChecklistRaw: string,
+    @Body('fuel_state') fuelStateRaw: string,
     @UploadedFiles()
     files: {
       photos?: Express.Multer.File[];
       worker_signature?: Express.Multer.File[];
       client_signature?: Express.Multer.File[];
+      material_photos?: Express.Multer.File[];
+      fuel_photo?: Express.Multer.File[];
     },
   ) {
     return this.missionsService.completeMission(
@@ -230,6 +254,12 @@ export class MissionsController {
       files.photos || [],
       files.worker_signature?.[0],
       files.client_signature?.[0],
+      {
+        materialPhotos: files.material_photos || [],
+        fuelPhoto: files.fuel_photo?.[0],
+        closureChecklistRaw,
+        fuelStateRaw,
+      },
     );
   }
 

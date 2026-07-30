@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsEnum,
   IsArray,
+  IsIn,
   IsNumber,
   IsInt,
   IsObject,
@@ -13,14 +14,33 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { EQUIPMENT_IDS } from '../equipment.catalog';
 
 export enum MissionType {
   ROOF = 'roof',
 }
 
 export enum MissionSubtype {
+  // Legacy values (missions created before the service catalog)
   CLEANING = 'cleaning',
   COATING = 'coating',
+  // Roof Revive service catalog (Quote-Agent-Knowledge-Base/services.json)
+  DEMOUSSAGE = 'demoussage',
+  GOUTTIERES = 'gouttieres',
+  HYDROFUGE_WAX = 'hydrofuge_wax',
+  DEPLACEMENT = 'deplacement',
+  PEINTURE_TOITURE = 'peinture_toiture',
+  FACADE = 'facade',
+  PANNEAUX_SOLAIRES = 'panneaux_solaires',
+  NACELLE = 'nacelle',
+  TERRASSE = 'terrasse',
+  MUR = 'mur',
+  CHEMINEE = 'cheminee',
+  PILIERS = 'piliers',
+  VELUX = 'velux',
+  DRIVEWAY = 'driveway',
+  ESCALIER = 'escalier',
+  EVAC_MOUSSE = 'evac_mousse',
 }
 
 export class CreateMissionDto {
@@ -100,4 +120,13 @@ export class CreateMissionDto {
   @IsArray()
   @IsUUID('4', { each: true })
   assigned_workers?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Equipment ids (gros_dibo, petit_dibo, machine_peinture, camionnette)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(EQUIPMENT_IDS, { each: true })
+  equipment?: string[];
 }

@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { MissionType, MissionSubtype } from './create-mission.dto';
+import { EQUIPMENT_IDS } from '../equipment.catalog';
 
 export class UpdateMissionDto {
   @ApiPropertyOptional({
@@ -96,6 +97,15 @@ export class UpdateMissionDto {
   @IsOptional()
   @IsString()
   additional_info?: string;
+
+  @ApiPropertyOptional({
+    description: 'Equipment ids (gros_dibo, petit_dibo, machine_peinture, camionnette)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(EQUIPMENT_IDS, { each: true })
+  equipment?: string[];
 
   @ApiPropertyOptional({ description: 'Property features' })
   @IsOptional()

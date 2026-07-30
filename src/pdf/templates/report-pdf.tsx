@@ -275,6 +275,23 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
       repair: 'Réparation',
       inspection: 'Inspection',
       maintenance: 'Entretien',
+      // Catalogue de services Roof Revive (services.json)
+      demoussage: 'Démoussage de toiture + inspection gratuite et réparations nécessaires',
+      gouttieres: 'Nettoyage des gouttières',
+      hydrofuge_wax: 'Traitement hydrofuge (wax) – garantie 3 ans',
+      deplacement: 'Déplacement + carburant machine',
+      peinture_toiture: 'Peinture de toiture (anthracite)',
+      facade: 'Nettoyage de façade',
+      panneaux_solaires: 'Nettoyage des panneaux solaires',
+      nacelle: 'Location nacelle élévatrice',
+      terrasse: 'Nettoyage terrasse',
+      mur: 'Nettoyage de mur',
+      cheminee: 'Nettoyage cheminée',
+      piliers: 'Nettoyage piliers',
+      velux: 'Nettoyage velux / vitres',
+      driveway: 'Nettoyage allée',
+      escalier: 'Nettoyage escalier',
+      evac_mousse: 'Évacuation de la mousse',
     };
     return subtypes[subtype] || subtype;
   };

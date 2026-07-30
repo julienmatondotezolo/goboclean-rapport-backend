@@ -8,6 +8,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
+import { EQUIPMENT_CATALOG } from './equipment.catalog';
 import { ServiceLoggerService } from '../common/services/service-logger.service';
 import { ReportsService } from '../reports/reports.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
@@ -53,8 +54,11 @@ export class MissionsService {
         facade_count: dto.facade_count || 1,
         additional_info: dto.additional_info || null,
         features: dto.features || {},
+        equipment: dto.equipment || [],
         status: 'assigned',
       };
+
+      await this.assertNoEquipmentConflict(dto.appointment_time, dto.equipment);
 
       // Attach assigned workers if provided
       if (dto.assigned_workers && dto.assigned_workers.length > 0) {
@@ -309,7 +313,16 @@ export class MissionsService {
     const supabase = this.supabaseService.getClient();
 
     // Verify mission exists
-    await this.getMissionRaw(missionId);
+    const existing = await this.getMissionRaw(missionId);
+
+    // Equipment or date change → re-check machine availability
+    if (dto.equipment !== undefined || dto.appointment_time !== undefined) {
+      await this.assertNoEquipmentConflict(
+        dto.appointment_time ?? existing.appointment_time,
+        dto.equipment ?? existing.equipment,
+        missionId,
+      );
+    }
 
     const updateData: Record<string, any> = { ...dto };
 
@@ -876,6 +889,8 @@ export class MissionsService {
       throw new BadRequestException(`Cannot reschedule a ${mission.status} mission`);
     }
 
+    await this.assertNoEquipmentConflict(dto.appointment_time, mission.equipment, missionId);
+
     const supabase = this.supabaseService.getClient();
 
     const { data, error } = await supabase
@@ -909,6 +924,59 @@ export class MissionsService {
   // ---------------------------------------------------------------------------
   // HELPERS
   // ---------------------------------------------------------------------------
+
+  /**
+   * Règle d'Ali : jamais deux équipes sur la même machine le même jour
+   * (capacités dans EQUIPMENT_CATALOG ; machine_peinture ×2, camionnette non
+   * limitée). Le "jour" est le jour calendaire en Europe/Brussels.
+   */
+  private async assertNoEquipmentConflict(
+    appointmentTime: string,
+    equipment: string[] | undefined,
+    excludeMissionId?: string,
+  ) {
+    const limited = (equipment ?? []).filter((e) => EQUIPMENT_CATALOG[e]?.capacity != null);
+    if (!limited.length) return;
+
+    const brusselsDay = (iso: string) =>
+      new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Europe/Brussels' });
+    const day = brusselsDay(appointmentTime);
+
+    // Fenêtre large ±1 jour UTC, puis filtre exact sur le jour Brussels en JS
+    const target = new Date(appointmentTime);
+    const from = new Date(target.getTime() - 36 * 3600_000).toISOString();
+    const to = new Date(target.getTime() + 36 * 3600_000).toISOString();
+
+    const supabase = this.supabaseService.getClient();
+    let query = supabase
+      .from('missions')
+      .select('id, equipment, appointment_time, client_first_name, client_last_name')
+      .not('status', 'eq', 'cancelled')
+      .gte('appointment_time', from)
+      .lte('appointment_time', to);
+    if (excludeMissionId) {
+      query = query.neq('id', excludeMissionId);
+    }
+    const { data, error } = await query;
+    if (error) {
+      throw new BadRequestException(`Failed to check equipment availability: ${error.message}`);
+    }
+
+    const sameDay = (data ?? []).filter((m) => brusselsDay(m.appointment_time) === day);
+    for (const eq of limited) {
+      const capacity = EQUIPMENT_CATALOG[eq].capacity as number;
+      const holders = sameDay.filter((m) => (m.equipment ?? []).includes(eq));
+      if (holders.length >= capacity) {
+        const who = holders
+          .map((m) => `${m.client_first_name} ${m.client_last_name}`)
+          .join(', ');
+        throw new BadRequestException(
+          `Equipment conflict: "${EQUIPMENT_CATALOG[eq].label}" is already booked on ${day} (mission: ${who}). ` +
+            `Capacity: ${capacity} per day.`,
+        );
+      }
+    }
+  }
 
   private async getMissionRaw(missionId: string) {
     const supabase = this.supabaseService.getClient();

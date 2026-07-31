@@ -110,7 +110,7 @@ export class EmailService {
             <td>
               <img src="https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/roofrevive-logo.png"
                    alt="Roof Revive" width="130" style="display:block;width:130px;height:auto;" />
-              <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:${green};margin-top:6px;">Roof Revive <span style="font-weight:normal;color:#64748b;">by GoboClean</span></div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${green};margin-top:6px;">Roof Revive <span style="font-weight:normal;font-size:9px;color:#94a3b8;">by GoboClean</span></div>
               <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#94a3b8;letter-spacing:2px;margin-top:2px;">NETTOYAGE &amp; ENTRETIEN DE TOITURES</div>
             </td>
             <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;vertical-align:bottom;">
@@ -200,7 +200,7 @@ export class EmailService {
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
-.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.header{background:#ffffff;color:#111;padding:24px;text-align:center;border-radius:8px 8px 0 0;border-bottom:4px solid #064e3b}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#f0fdf4;border-left:4px solid:#064e3b;padding:12px;margin:16px 0}
 .logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
@@ -263,7 +263,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
-.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.header{background:#ffffff;color:#111;padding:24px;text-align:center;border-radius:8px 8px 0 0;border-bottom:4px solid #064e3b}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin:16px 0}
 .logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
@@ -325,8 +325,8 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
     // Prepare attachments
     const attachments = [];
     
-    // Use Goboclean logo from Supabase
-    const logoUrl = 'https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/goboclean-logo.png';
+    const logoUrl =
+      'https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/roofrevive-logo.png';
     
     if (pdfBuffer) {
       attachments.push({
@@ -339,24 +339,24 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       const { data, error } = await this.resend.emails.send({
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: allRecipients,
-        subject: `Goboclean Rapport: Mission terminée — ${clientName} — #${mission.id.slice(0, 8).toUpperCase()}`,
+        subject: `Mission terminée — ${clientName} — Roof Revive (#${mission.id.slice(0, 8).toUpperCase()})`,
         attachments,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
-.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.header{background:#ffffff;color:#111;padding:24px;text-align:center;border-radius:8px 8px 0 0;border-bottom:4px solid #064e3b}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin:16px 0}
 .logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
-.goboclean-logo{width:60px;height:60px;margin-right:15px;border-radius:12px}
+.goboclean-logo{width:110px;height:auto;margin-right:15px}
 </style></head><body>
 <div class="header">
   <div class="logo">
-    <img src="${logoUrl}" alt="GoBo Clean" class="goboclean-logo">
-    <div>
-      <h1 style="margin:0;font-size:28px;color:#a3e635">GoBo Clean</h1>
-      <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>
+    <img src="${logoUrl}" alt="Roof Revive" class="goboclean-logo">
+    <div style="text-align:left">
+      <h1 style="margin:0;font-size:20px;color:#064e3b">Roof Revive <span style="font-weight:normal;font-size:10px;color:#94a3b8">by GoboClean</span></h1>
+      <p style="margin:5px 0 0;color:#64748b">Mission terminée</p>
     </div>
   </div>
 </div>
@@ -556,8 +556,8 @@ xref 0 5 0000000000 65535 f 0000000015 00000 n 0000000066 00000 n 0000000123 000
       content: testPdfContent,
     }];
 
-    // Use Goboclean logo from Supabase
-    const logoUrl = 'https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/goboclean-logo.png';
+    const logoUrl =
+      'https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/roofrevive-logo.png';
 
     try {
       const { data, error } = await this.resend.emails.send({
@@ -569,18 +569,18 @@ xref 0 5 0000000000 65535 f 0000000015 00000 n 0000000066 00000 n 0000000123 000
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
-.header{background:#064e3b;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0}
+.header{background:#ffffff;color:#111;padding:24px;text-align:center;border-radius:8px 8px 0 0;border-bottom:4px solid #064e3b}
 .content{background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none}
 .info{background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin:16px 0}
 .logo{display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px}
-.goboclean-logo{width:60px;height:60px;margin-right:15px;border-radius:12px}
+.goboclean-logo{width:110px;height:auto;margin-right:15px}
 </style></head><body>
 <div class="header">
   <div class="logo">
-    <img src="${logoUrl}" alt="GoBo Clean" class="goboclean-logo">
-    <div>
-      <h1 style="margin:0;font-size:28px;color:#a3e635">GoBo Clean</h1>
-      <p style="margin:5px 0 0;opacity:0.9">Mission terminée ✅</p>
+    <img src="${logoUrl}" alt="Roof Revive" class="goboclean-logo">
+    <div style="text-align:left">
+      <h1 style="margin:0;font-size:20px;color:#064e3b">Roof Revive <span style="font-weight:normal;font-size:10px;color:#94a3b8">by GoboClean</span></h1>
+      <p style="margin:5px 0 0;color:#64748b">Mission terminée</p>
     </div>
   </div>
 </div>

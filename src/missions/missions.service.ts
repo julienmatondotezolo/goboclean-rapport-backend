@@ -1181,9 +1181,11 @@ export class MissionsService {
         const who = holders
           .map((m) => `${m.client_first_name} ${m.client_last_name}`)
           .join(', ');
+        const dayFr = day.split('-').reverse().join('/');
         throw new BadRequestException(
-          `Equipment conflict: "${EQUIPMENT_CATALOG[eq].label}" is already booked on ${day} (mission: ${who}). ` +
-            `Capacity: ${capacity} per day.`,
+          `Conflit matériel : « ${EQUIPMENT_CATALOG[eq].label} » est déjà réservé le ${dayFr} ` +
+            `(mission : ${who}). ${capacity} exemplaire(s) disponible(s) par jour — ` +
+            `choisis une autre date ou une autre machine.`,
         );
       }
     }

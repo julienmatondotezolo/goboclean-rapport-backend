@@ -240,6 +240,8 @@ export class MissionsController {
     @CurrentUser() user: any,
     @Body('closure_checklist') closureChecklistRaw: string,
     @Body('fuel_state') fuelStateRaw: string,
+    @Body('payment_method') paymentMethod: string,
+    @Body('payment_amount') paymentAmount: string,
     @UploadedFiles()
     files: {
       photos?: Express.Multer.File[];
@@ -260,6 +262,8 @@ export class MissionsController {
         fuelPhoto: files.fuel_photo?.[0],
         closureChecklistRaw,
         fuelStateRaw,
+        paymentMethod,
+        paymentAmount,
       },
     );
   }

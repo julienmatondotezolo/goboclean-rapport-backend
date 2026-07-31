@@ -652,6 +652,8 @@ export class MissionsService {
       fuelPhoto?: Express.Multer.File;
       closureChecklistRaw?: string;
       fuelStateRaw?: string;
+      paymentMethod?: string;
+      paymentAmount?: string;
     },
   ) {
     const mission = await this.getMissionRaw(missionId);
@@ -661,6 +663,24 @@ export class MissionsService {
     // Clôture bloquante (règles d'Ali) : checklist complète + photos matériel
     // + état essence/kilométrage + photo — sinon la mission ne peut pas être clôturée.
     const { checklist, fuelState } = this.validateClosure(mission, closure);
+
+    // Nouveau flux terrain (modèle ACC) : le paiement est encaissé AVANT la
+    // signature. legacy = anciennes tablettes (transition CLOSURE_ENFORCEMENT=off).
+    const legacyClient = checklist === null;
+    const VALID_METHODS = ['cash', 'virement', 'virement_instantane', 'autre', 'differe'];
+    const paymentMethod = closure?.paymentMethod || null;
+    if (!legacyClient) {
+      if (!workerSignature || !clientSignature) {
+        throw new BadRequestException(
+          'Les signatures du technicien et du client sont obligatoires pour clôturer.',
+        );
+      }
+      if (!paymentMethod || !VALID_METHODS.includes(paymentMethod)) {
+        throw new BadRequestException(
+          'Le mode de paiement est obligatoire (cash, virement, virement_instantane, autre ou differe).',
+        );
+      }
+    }
 
     if (mission.status !== 'waiting_completion') {
       throw new BadRequestException(
@@ -836,6 +856,19 @@ export class MissionsService {
       }
     }
 
+    // Paiement encaissé sur place (avant signature) — 'differe' = pas de
+    // paiement sur place : le bon partira quand l'admin l'enregistrera.
+    const paymentAmount = closure?.paymentAmount ? parseFloat(closure.paymentAmount) : null;
+    const paymentRecord =
+      paymentMethod && paymentMethod !== 'differe'
+        ? {
+            method: paymentMethod,
+            amount: paymentAmount && Number.isFinite(paymentAmount) ? paymentAmount : null,
+            received_at: new Date().toISOString(),
+            recorded_by: userId,
+          }
+        : null;
+
     // Update mission status to completed
     const updateData: any = {
       status: 'completed',
@@ -843,6 +876,9 @@ export class MissionsService {
       closure_checklist: checklist,
       fuel_state: fuelState,
     };
+    if (paymentRecord) {
+      updateData.payment = paymentRecord;
+    }
 
     if (report) {
       updateData.report_id = report.id;
@@ -871,6 +907,27 @@ export class MissionsService {
       } catch (pdfError: any) {
         this.logger.error(`Failed to generate/send PDF for report ${report.id}: ${pdfError.message}`);
         // Don't fail the mission completion if PDF generation fails — it can be retried
+      }
+    }
+
+    // Bon d'exécution : paiement encaissé sur place → envoi immédiat au client
+    if (paymentRecord && mission.client_email && pdfBuffer && report) {
+      try {
+        await this.emailService.sendReportEmail({
+          to: mission.client_email,
+          clientName: `${mission.client_first_name} ${mission.client_last_name}`,
+          reportId: report.id,
+          pdfBuffer,
+          workerName: 'Roof Revive - Gobo Clean',
+          address: mission.client_address,
+        });
+        await supabase
+          .from('missions')
+          .update({ bon_sent_at: new Date().toISOString() })
+          .eq('id', missionId);
+        this.logger.log(`📨 Bon d'exécution envoyé à ${mission.client_email} (paiement ${paymentRecord.method})`);
+      } catch (bonError: any) {
+        this.logger.error(`Échec envoi du bon : ${bonError.message}`);
       }
     }
 

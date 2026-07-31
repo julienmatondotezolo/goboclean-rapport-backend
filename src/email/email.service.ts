@@ -52,7 +52,7 @@ export class EmailService {
       const { data, error } = await this.resend.emails.send({
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: [to],
-        subject: `Votre rapport d'intervention — GoBo Clean (N° ${reportId.slice(0, 8).toUpperCase()})`,
+        subject: `Votre rapport d'intervention — Roof Revive (N° ${reportId.slice(0, 8).toUpperCase()})`,
         html: this.generateEmailTemplate(clientName, reportId, workerName, address),
         attachments: [
           {
@@ -104,25 +104,27 @@ export class EmailService {
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
-        <!-- En-tête -->
-        <tr><td style="background-color:${green};border-radius:12px 12px 0 0;padding:28px 32px;">
+        <!-- En-tête : logo Roof Revive -->
+        <tr><td style="background-color:#ffffff;border-radius:12px 12px 0 0;padding:26px 32px 18px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
             <td>
-              <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">GoBo <span style="color:${lime};">Clean</span></div>
-              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ffffffb3;letter-spacing:2px;margin-top:4px;">NETTOYAGE &amp; ENTRETIEN DE TOITURES</div>
+              <img src="https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/roofrevive-logo.png"
+                   alt="Roof Revive" width="130" style="display:block;width:130px;height:auto;" />
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#64748b;letter-spacing:2px;margin-top:6px;">NETTOYAGE &amp; ENTRETIEN DE TOITURES</div>
             </td>
-            <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#ffffffcc;vertical-align:bottom;">
+            <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;vertical-align:bottom;">
               Rapport N° ${reportNumber}
             </td>
           </tr></table>
         </td></tr>
-        <tr><td style="background-color:${lime};height:4px;font-size:0;">&nbsp;</td></tr>
+        <tr><td style="background-color:${green};height:5px;font-size:0;">&nbsp;</td></tr>
+        <tr><td style="background-color:${lime};height:3px;font-size:0;">&nbsp;</td></tr>
 
         <!-- Corps -->
         <tr><td style="background-color:#ffffff;padding:32px;font-family:Arial,Helvetica,sans-serif;">
           <p style="margin:0 0 16px;font-size:16px;color:#1e293b;"><strong>Bonjour ${clientName},</strong></p>
           <p style="margin:0 0 16px;font-size:14px;color:#334155;line-height:1.6;">
-            Merci d'avoir fait confiance à <strong>GoBo Clean</strong> pour l'entretien de votre toiture.
+            Merci d'avoir fait confiance à <strong>Roof Revive</strong> pour l'entretien de votre toiture.
             Vous trouverez en pièce jointe le rapport complet de l'intervention réalisée à votre domicile.
           </p>
 
@@ -153,13 +155,13 @@ export class EmailService {
             Une question, ou besoin d'une prochaine intervention&nbsp;?
             Répondez simplement à cet email ou contactez-nous.
           </p>
-          <p style="margin:16px 0 0;font-size:14px;color:#1e293b;">Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
+          <p style="margin:16px 0 0;font-size:14px;color:#1e293b;">Cordialement,<br><strong>L'équipe Roof Revive</strong></p>
         </td></tr>
 
         <!-- Pied de page -->
         <tr><td style="background-color:#ffffff;border-radius:0 0 12px 12px;border-top:1px solid ${border};padding:20px 32px;font-family:Arial,Helvetica,sans-serif;">
           <p style="margin:0;font-size:12px;color:${muted};text-align:center;">
-            <strong style="color:${green};">GoBo Clean</strong> · Bruxelles, Belgique · <a href="mailto:contact@goboclean.be" style="color:${green};text-decoration:none;">contact@goboclean.be</a>
+            <strong style="color:${green};">Roof Revive</strong> · Bruxelles, Belgique · <a href="mailto:contact@goboclean.be" style="color:${green};text-decoration:none;">contact@goboclean.be</a>
           </p>
         </td></tr>
 

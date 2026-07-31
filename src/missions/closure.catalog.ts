@@ -16,7 +16,7 @@ export const CLOSURE_CHECKLIST_IDS = [
 export const FUEL_LEVELS = ['plein', 'moitie', 'vide'] as const;
 
 /** Matériel dont on suit l'essence (la machine peinture n'a pas de réservoir suivi). */
-export const FUEL_EQUIPMENT = ['gros_dibo', 'petit_dibo', 'camionnette'];
+export const FUEL_EQUIPMENT = ['gros_dibo', 'petit_dibo', 'camionnette', 'hilux'];
 
 export interface FuelState {
   levels: Record<string, (typeof FUEL_LEVELS)[number]>;

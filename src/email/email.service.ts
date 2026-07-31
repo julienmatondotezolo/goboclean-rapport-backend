@@ -9,6 +9,7 @@ export interface SendReportEmailParams {
   pdfBuffer: Buffer;
   workerName: string;
   address: string;
+  language?: string;
 }
 
 export interface MissionData {
@@ -45,6 +46,7 @@ export class EmailService {
 
   async sendReportEmail(params: SendReportEmailParams): Promise<void> {
     const { to, clientName, reportId, pdfBuffer, workerName, address } = params;
+    const lang = (params as any).language === 'nl' ? 'nl' : 'fr';
 
     try {
       this.logger.log(`📧 Sending report email to ${to} for report ${reportId}`);
@@ -52,8 +54,11 @@ export class EmailService {
       const { data, error } = await this.resend.emails.send({
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: [to],
-        subject: `Votre rapport d'intervention — Roof Revive by GoboClean (N° ${reportId.slice(0, 8).toUpperCase()})`,
-        html: this.generateEmailTemplate(clientName, reportId, workerName, address),
+        subject:
+          lang === 'nl'
+            ? `Uw interventieverslag — Roof Revive by GoboClean (Nr. ${reportId.slice(0, 8).toUpperCase()})`
+            : `Votre rapport d'intervention — Roof Revive by GoboClean (N° ${reportId.slice(0, 8).toUpperCase()})`,
+        html: this.generateEmailTemplate(clientName, reportId, workerName, address, lang),
         attachments: [
           {
             filename: `Rapport-${reportId.slice(0, 8).toUpperCase()}.pdf`,
@@ -84,7 +89,50 @@ export class EmailService {
     reportId: string,
     workerName: string,
     address: string,
+    lang: 'fr' | 'nl' = 'fr',
   ): string {
+    const T =
+      lang === 'nl'
+        ? {
+            tagline: 'REINIGING &amp; ONDERHOUD VAN DAKEN',
+            report: 'Verslag',
+            hello: 'Beste',
+            thanks:
+              'Bedankt voor uw vertrouwen in <strong>Roof Revive by GoboClean</strong> voor het onderhoud van uw dak. In bijlage vindt u het volledige verslag van de interventie bij u thuis.',
+            address: 'Adres',
+            technician: 'Technicus',
+            includes: 'Het verslag in bijlage bevat:',
+            li1: 'het detail van de uitgevoerde diensten',
+            li2: "de foto's voor / na de interventie",
+            li3: 'de opmerkingen van onze technicus',
+            li4: 'de handtekeningen ter validatie',
+            proof:
+              'Dit document geldt als bewijs van de uitgevoerde werken en kan dienen voor uw persoonlijke dossiers of verzekering.',
+            question:
+              'Een vraag, of een volgende interventie nodig? Antwoord gewoon op deze e-mail of contacteer ons.',
+            regards: 'Met vriendelijke groeten,',
+            team: 'Het Roof Revive by GoboClean team',
+          }
+        : {
+            tagline: 'NETTOYAGE &amp; ENTRETIEN DE TOITURES',
+            report: 'Rapport',
+            hello: 'Bonjour',
+            thanks:
+              "Merci d'avoir fait confiance à <strong>Roof Revive by GoboClean</strong> pour l'entretien de votre toiture. Vous trouverez en pièce jointe le rapport complet de l'intervention réalisée à votre domicile.",
+            address: 'Adresse',
+            technician: 'Technicien',
+            includes: '${T.includes}',
+            li1: '${T.li1}',
+            li2: '${T.li2}',
+            li3: '${T.li3}',
+            li4: '${T.li4}',
+            proof:
+              "${T.proof}",
+            question:
+              "Une question, ou besoin d'une prochaine intervention&nbsp;? Répondez simplement à cet email ou contactez-nous.",
+            regards: 'Cordialement,',
+            team: "L'équipe Roof Revive by GoboClean",
+          };
     const green = '#064e3b';
     const lime = '#a3e635';
     const muted = '#64748b';
@@ -111,10 +159,10 @@ export class EmailService {
               <img src="https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/roofrevive-logo.png"
                    alt="Roof Revive" width="130" style="display:block;width:130px;height:auto;" />
               <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${green};margin-top:6px;">Roof Revive <span style="font-weight:normal;font-size:9px;color:#94a3b8;">by GoboClean</span></div>
-              <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#94a3b8;letter-spacing:2px;margin-top:2px;">NETTOYAGE &amp; ENTRETIEN DE TOITURES</div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#94a3b8;letter-spacing:2px;margin-top:2px;">${T.tagline}</div>
             </td>
             <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;vertical-align:bottom;">
-              Rapport N° ${reportNumber}
+              ${T.report} N° ${reportNumber}
             </td>
           </tr></table>
         </td></tr>
@@ -123,40 +171,38 @@ export class EmailService {
 
         <!-- Corps -->
         <tr><td style="background-color:#ffffff;padding:32px;font-family:Arial,Helvetica,sans-serif;">
-          <p style="margin:0 0 16px;font-size:16px;color:#1e293b;"><strong>Bonjour ${clientName},</strong></p>
+          <p style="margin:0 0 16px;font-size:16px;color:#1e293b;"><strong>${T.hello} ${clientName},</strong></p>
           <p style="margin:0 0 16px;font-size:14px;color:#334155;line-height:1.6;">
-            Merci d'avoir fait confiance à <strong>Roof Revive by GoboClean</strong> pour l'entretien de votre toiture.
-            Vous trouverez en pièce jointe le rapport complet de l'intervention réalisée à votre domicile.
+            ${T.thanks}
           </p>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                  style="background-color:#f8fafc;border:1px solid ${border};border-radius:10px;margin:20px 0;">
             <tr><td style="padding:18px 22px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${infoRow('Rapport', 'N° ' + reportNumber)}
-                ${infoRow('Adresse', address)}
-                ${infoRow('Technicien', workerName)}
+                ${infoRow(T.report, 'N° ' + reportNumber)}
+                ${infoRow(T.address, address)}
+                ${infoRow(T.technician, workerName)}
               </table>
             </td></tr>
           </table>
 
-          <p style="margin:0 0 8px;font-size:14px;color:#334155;">Le rapport en pièce jointe comprend&nbsp;:</p>
+          <p style="margin:0 0 8px;font-size:14px;color:#334155;">${T.includes}</p>
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
-            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">le détail des services effectués</td></tr>
-            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">les photos avant / après intervention</td></tr>
-            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">les observations de notre technicien</td></tr>
-            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">les signatures de validation</td></tr>
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">${T.li1}</td></tr>
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">${T.li2}</td></tr>
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">${T.li3}</td></tr>
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">${T.li4}</td></tr>
           </table>
 
           <p style="margin:0 0 16px;font-size:13px;color:${muted};line-height:1.6;">
-            Ce document atteste de la prestation effectuée et peut servir pour vos dossiers personnels ou d'assurance.
+            ${T.proof}
           </p>
 
           <p style="margin:24px 0 0;font-size:14px;color:#334155;line-height:1.6;">
-            Une question, ou besoin d'une prochaine intervention&nbsp;?
-            Répondez simplement à cet email ou contactez-nous.
+            ${T.question}
           </p>
-          <p style="margin:16px 0 0;font-size:14px;color:#1e293b;">Cordialement,<br><strong>L'équipe Roof Revive by GoboClean</strong></p>
+          <p style="margin:16px 0 0;font-size:14px;color:#1e293b;">${T.regards}<br><strong>${T.team}</strong></p>
         </td></tr>
 
         <!-- Pied de page -->

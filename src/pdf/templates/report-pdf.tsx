@@ -389,6 +389,13 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
             {report.client_phone ? (
               <InfoRow frLabel="Téléphone" nlLabel="Telefoon" value={report.client_phone} />
             ) : null}
+            {report.client_language ? (
+              <InfoRow
+                frLabel="Langue"
+                nlLabel="Taal"
+                value={{ fr: 'Français', nl: 'Nederlands', en: 'English' }[report.client_language as string] ?? report.client_language}
+              />
+            ) : null}
           </View>
 
           <View style={styles.col}>

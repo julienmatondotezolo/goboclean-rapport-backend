@@ -98,8 +98,13 @@ export class UpdateMissionDto {
   @IsString()
   additional_info?: string;
 
+  @ApiPropertyOptional({ description: 'Client language (fr, nl, en)' })
+  @IsOptional()
+  @IsIn(['fr', 'nl', 'en'])
+  client_language?: string;
+
   @ApiPropertyOptional({
-    description: 'Equipment ids (gros_dibo, petit_dibo, machine_peinture, camionnette)',
+    description: 'Equipment ids (gros_dibo, petit_dibo, machine_peinture, camionnette, hilux)',
     type: [String],
   })
   @IsOptional()

@@ -48,6 +48,7 @@ export class MissionsService {
         client_address: dto.client_address,
         client_latitude: dto.client_latitude || null,
         client_longitude: dto.client_longitude || null,
+        client_language: dto.client_language || 'fr',
         appointment_time: dto.appointment_time,
         mission_type: dto.mission_type || 'roof',
         mission_subtypes: dto.mission_subtypes,
@@ -921,6 +922,7 @@ export class MissionsService {
           pdfBuffer,
           workerName: 'Roof Revive - Gobo Clean',
           address: mission.client_address,
+          language: mission.client_language,
         });
         await supabase
           .from('missions')
@@ -1039,6 +1041,7 @@ export class MissionsService {
             pdfBuffer,
             workerName: 'Roof Revive - Gobo Clean',
             address: mission.client_address,
+            language: mission.client_language,
           });
           bonSentAt = new Date().toISOString();
         }

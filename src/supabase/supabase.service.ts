@@ -67,7 +67,7 @@ export class SupabaseService {
     if (data) {
       const { data: missionData, error: missionError } = await this.supabase
         .from('missions')
-        .select('mission_type, mission_subtypes, appointment_time, started_at, completed_at, surface_area, additional_info, payment')
+        .select('mission_type, mission_subtypes, appointment_time, started_at, completed_at, surface_area, additional_info, payment, client_language')
         .eq('report_id', reportId)
         .single();
         
@@ -80,6 +80,7 @@ export class SupabaseService {
         data.surface_area = missionData.surface_area;
         data.additional_info = missionData.additional_info;
         data.payment = missionData.payment;
+        data.client_language = missionData.client_language;
       }
     }
     

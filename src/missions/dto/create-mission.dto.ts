@@ -121,8 +121,13 @@ export class CreateMissionDto {
   @IsUUID('4', { each: true })
   assigned_workers?: string[];
 
+  @ApiPropertyOptional({ description: 'Client language (fr, nl, en)', default: 'fr' })
+  @IsOptional()
+  @IsIn(['fr', 'nl', 'en'])
+  client_language?: string;
+
   @ApiPropertyOptional({
-    description: 'Equipment ids (gros_dibo, petit_dibo, machine_peinture, camionnette)',
+    description: 'Equipment ids (gros_dibo, petit_dibo, machine_peinture, camionnette, hilux)',
     type: [String],
   })
   @IsOptional()

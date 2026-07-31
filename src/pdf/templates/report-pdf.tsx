@@ -469,6 +469,12 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
         {/* Signatures */}
         <View style={styles.section} wrap={false}>
           <SectionTitle frText="Validation" nlText="Validatie" />
+          <Text style={{ fontSize: 8.5, color: MUTED, marginBottom: 8, lineHeight: 1.5 }}>
+            Par sa signature, le client confirme que les travaux ci-dessus ont été effectués
+            correctement et à sa satisfaction.{'\n'}
+            Met zijn handtekening bevestigt de klant dat de bovenstaande werken correct en naar
+            tevredenheid werden uitgevoerd.
+          </Text>
           <View style={styles.signaturesRow}>
             <View style={styles.signatureBox}>
               <Text style={styles.signatureLabel}>Signature du technicien</Text>

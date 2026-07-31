@@ -675,9 +675,10 @@ export class MissionsService {
           'Les signatures du technicien et du client sont obligatoires pour clôturer.',
         );
       }
-      if (!paymentMethod || !VALID_METHODS.includes(paymentMethod)) {
+      // Le paiement sur place est OPTIONNEL (le client peut payer plus tard)
+      if (paymentMethod && !VALID_METHODS.includes(paymentMethod)) {
         throw new BadRequestException(
-          'Le mode de paiement est obligatoire (cash, virement, virement_instantane, autre ou differe).',
+          'Mode de paiement invalide (cash, virement, virement_instantane, autre ou differe).',
         );
       }
     }

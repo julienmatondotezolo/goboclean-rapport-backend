@@ -466,6 +466,30 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
           </View>
         )}
 
+        {/* Paiement — preuve sur le rapport si payé sur place */}
+        {report.payment && report.payment.method && report.payment.method !== 'differe' && (
+          <View style={styles.section} wrap={false}>
+            <SectionTitle frText="Paiement" nlText="Betaling" />
+            <View style={styles.commentsBox}>
+              <Text style={{ fontFamily: 'Helvetica-Bold' }}>
+                Payé sur place le {formatDate(report.payment.received_at)}
+                {' — '}
+                {{
+                  cash: 'Cash',
+                  virement: 'Virement bancaire',
+                  virement_instantane: 'Virement instantané',
+                  autre: 'Autre',
+                }[report.payment.method as string] ?? report.payment.method}
+                {report.payment.amount ? ` — ${Number(report.payment.amount).toFixed(2)} €` : ''}
+              </Text>
+              <Text style={{ fontSize: 8.5, color: MUTED, marginTop: 2 }}>
+                Ter plaatse betaald op {formatDate(report.payment.received_at)}
+                {report.payment.amount ? ` — ${Number(report.payment.amount).toFixed(2)} €` : ''}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Signatures */}
         <View style={styles.section} wrap={false}>
           <SectionTitle frText="Validation" nlText="Validatie" />

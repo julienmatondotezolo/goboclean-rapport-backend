@@ -424,10 +424,11 @@ export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
               return (
                 <View key={st} style={styles.serviceRow}>
                   <Text style={styles.serviceDash}>–</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.serviceText}>{labels.fr}</Text>
+                  <Text style={styles.serviceText}>
+                    {labels.fr}
+                    {'\n'}
                     <Text style={styles.serviceTextNl}>{labels.nl}</Text>
-                  </View>
+                  </Text>
                 </View>
               );
             })}

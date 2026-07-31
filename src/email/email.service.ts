@@ -52,7 +52,7 @@ export class EmailService {
       const { data, error } = await this.resend.emails.send({
         from: this.configService.get<string>('SMTP_FROM') || 'rapport@goboclean.be',
         to: [to],
-        subject: `Goboclean Mail: Rapport d'intervention - Nettoyage de toiture`,
+        subject: `Votre rapport d'intervention — GoBo Clean (N° ${reportId.slice(0, 8).toUpperCase()})`,
         html: this.generateEmailTemplate(clientName, reportId, workerName, address),
         attachments: [
           {
@@ -74,130 +74,100 @@ export class EmailService {
     }
   }
 
+  /**
+   * Email client (bon d'exécution / rapport) — HTML transactionnel :
+   * layout en tables + styles 100 % inline (Gmail supprime les blocs <style>),
+   * pas de SVG (non rendu par la plupart des clients mail).
+   */
   private generateEmailTemplate(
     clientName: string,
     reportId: string,
     workerName: string,
     address: string,
   ): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
-      color: white;
-      padding: 30px;
-      text-align: center;
-      border-radius: 10px 10px 0 0;
-    }
-    .logo {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 15px;
-    }
-    .content {
-      background: #ffffff;
-      padding: 30px;
-      border: 1px solid #e5e7eb;
-      border-top: none;
-    }
-    .info-box {
-      background: #f0fdf4;
-      border-left: 4px solid #064e3b;
-      padding: 15px;
-      margin: 20px 0;
-    }
-    .button {
-      display: inline-block;
-      background: #064e3b;
-      color: white;
-      padding: 12px 30px;
-      text-decoration: none;
-      border-radius: 6px;
-      margin: 20px 0;
-      font-weight: bold;
-    }
-    .footer {
-      text-align: center;
-      color: #6b7280;
-      font-size: 12px;
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo">
-      <div style="position: relative; transform: scale(0.75); margin-right: 15px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #a3e635;">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-        </svg>
-        <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: #a3e635; font-size: 18px;">G</span>
-      </div>
-      <div>
-        <h1 style="margin: 0; font-size: 28px;">GoBo Clean</h1>
-        <p style="margin: 5px 0 0 0; opacity: 0.9;">Rapport d'intervention</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="content">
-    <h2>Bonjour ${clientName},</h2>
-    
-    <p>Nous vous remercions d'avoir fait confiance à <strong>GoBo Clean</strong> pour le nettoyage de votre toiture.</p>
-    
-    <p>Vous trouverez ci-joint le rapport détaillé de l'intervention réalisée à votre domicile.</p>
-    
-    <div class="info-box">
-      <p style="margin: 0;"><strong>📋 Numéro de rapport:</strong> ${reportId.slice(0, 8).toUpperCase()}</p>
-      <p style="margin: 8px 0 0 0;"><strong>👷 Technicien:</strong> ${workerName}</p>
-      <p style="margin: 8px 0 0 0;"><strong>📍 Adresse:</strong> ${address}</p>
-    </div>
-    
-    <p>Le rapport comprend:</p>
-    <ul>
-      <li>Les informations détaillées de l'intervention</li>
-      <li>Les photos avant et après le nettoyage</li>
-      <li>Les observations techniques de notre équipe</li>
-      <li>Vos signatures (technicien et client)</li>
-    </ul>
-    
-    <p>Ce document constitue une preuve de la prestation effectuée et peut être utilisé pour vos dossiers personnels ou d'assurance.</p>
-    
-    <p style="margin-top: 30px;">
-      <strong>Besoin d'un nouveau nettoyage ?</strong><br>
-      N'hésitez pas à nous contacter pour planifier votre prochaine intervention.
-    </p>
-    
-    <p>Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
-  </div>
-  
-  <div class="footer">
-    <p><strong>GoBo Clean</strong></p>
-    <p>Bruxelles, Belgique</p>
-    <p>contact@goboclean.be | +32 471 XX XX XX</p>
-    <p style="margin-top: 15px; font-size: 11px;">
-      Cet email a été généré automatiquement. Merci de ne pas y répondre directement.
-    </p>
-  </div>
+    const green = '#064e3b';
+    const lime = '#a3e635';
+    const muted = '#64748b';
+    const border = '#e2e8f0';
+    const reportNumber = reportId.slice(0, 8).toUpperCase();
+    const infoRow = (label: string, value: string) => `
+      <tr>
+        <td style="padding:6px 0;font-size:13px;color:${muted};width:38%;vertical-align:top;">${label}</td>
+        <td style="padding:6px 0;font-size:13px;color:#1e293b;font-weight:bold;">${value}</td>
+      </tr>`;
+
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+        <!-- En-tête -->
+        <tr><td style="background-color:${green};border-radius:12px 12px 0 0;padding:28px 32px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">GoBo <span style="color:${lime};">Clean</span></div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ffffffb3;letter-spacing:2px;margin-top:4px;">NETTOYAGE &amp; ENTRETIEN DE TOITURES</div>
+            </td>
+            <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#ffffffcc;vertical-align:bottom;">
+              Rapport N° ${reportNumber}
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="background-color:${lime};height:4px;font-size:0;">&nbsp;</td></tr>
+
+        <!-- Corps -->
+        <tr><td style="background-color:#ffffff;padding:32px;font-family:Arial,Helvetica,sans-serif;">
+          <p style="margin:0 0 16px;font-size:16px;color:#1e293b;"><strong>Bonjour ${clientName},</strong></p>
+          <p style="margin:0 0 16px;font-size:14px;color:#334155;line-height:1.6;">
+            Merci d'avoir fait confiance à <strong>GoBo Clean</strong> pour l'entretien de votre toiture.
+            Vous trouverez en pièce jointe le rapport complet de l'intervention réalisée à votre domicile.
+          </p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                 style="background-color:#f8fafc;border:1px solid ${border};border-radius:10px;margin:20px 0;">
+            <tr><td style="padding:18px 22px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${infoRow('Rapport', 'N° ' + reportNumber)}
+                ${infoRow('Adresse', address)}
+                ${infoRow('Technicien', workerName)}
+              </table>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 8px;font-size:14px;color:#334155;">Le rapport en pièce jointe comprend&nbsp;:</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">le détail des services effectués</td></tr>
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">les photos avant / après intervention</td></tr>
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">les observations de notre technicien</td></tr>
+            <tr><td style="font-size:14px;color:${green};padding:2px 8px 2px 0;">&#10003;</td><td style="font-size:13px;color:#334155;padding:2px 0;">les signatures de validation</td></tr>
+          </table>
+
+          <p style="margin:0 0 16px;font-size:13px;color:${muted};line-height:1.6;">
+            Ce document atteste de la prestation effectuée et peut servir pour vos dossiers personnels ou d'assurance.
+          </p>
+
+          <p style="margin:24px 0 0;font-size:14px;color:#334155;line-height:1.6;">
+            Une question, ou besoin d'une prochaine intervention&nbsp;?
+            Répondez simplement à cet email ou contactez-nous.
+          </p>
+          <p style="margin:16px 0 0;font-size:14px;color:#1e293b;">Cordialement,<br><strong>L'équipe GoBo Clean</strong></p>
+        </td></tr>
+
+        <!-- Pied de page -->
+        <tr><td style="background-color:#ffffff;border-radius:0 0 12px 12px;border-top:1px solid ${border};padding:20px 32px;font-family:Arial,Helvetica,sans-serif;">
+          <p style="margin:0;font-size:12px;color:${muted};text-align:center;">
+            <strong style="color:${green};">GoBo Clean</strong> · Bruxelles, Belgique · <a href="mailto:contact@goboclean.be" style="color:${green};text-decoration:none;">contact@goboclean.be</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
 </body>
-</html>
-    `.trim();
+</html>`;
   }
 
   // ---------------------------------------------------------------------------

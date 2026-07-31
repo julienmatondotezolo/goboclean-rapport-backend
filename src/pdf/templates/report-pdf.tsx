@@ -1,226 +1,286 @@
 import React from 'react';
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  Image,
-  StyleSheet,
-  Font,
-} from '@react-pdf/renderer';
+import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+/**
+ * Rapport d'intervention — mise en page sobre et professionnelle.
+ * Palette : vert marque #064e3b, accent lime #a3e635, gris neutres.
+ * Tout le texte est en français ; le pied de page (coordonnées + pagination)
+ * est répété sur chaque page.
+ */
+
+const GREEN = '#064e3b';
+const LIME = '#a3e635';
+const TEXT = '#1e293b';
+const MUTED = '#64748b';
+const BORDER = '#e2e8f0';
+const BG_SOFT = '#f8fafc';
+
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
-    fontSize: 11,
+    paddingTop: 36,
+    paddingBottom: 70,
+    paddingHorizontal: 40,
+    fontSize: 10,
     fontFamily: 'Helvetica',
-    color: '#000000',
+    color: TEXT,
+    lineHeight: 1.45,
+  },
+
+  // ─── En-tête ────────────────────────────────────────────────
+  headerBand: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: GREEN,
   },
   header: {
-    backgroundColor: '#064e3b',
-    color: '#ffffff',
-    padding: 20,
-    marginBottom: 0,
-    marginLeft: -30,
-    marginRight: -30,
-    marginTop: -30,
-  },
-  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingLeft: 30,
-    paddingRight: 30,
-  },
-  logoSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    marginRight: 15,
+    alignItems: 'flex-end',
+    marginBottom: 6,
   },
   companyName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#a3e635',
+    fontSize: 20,
+    fontFamily: 'Helvetica-Bold',
+    color: GREEN,
+    letterSpacing: 0.5,
   },
   companyTagline: {
-    fontSize: 12,
-    color: '#ffffff',
+    fontSize: 8,
+    color: MUTED,
+    marginTop: 2,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  reportMeta: {
+    alignItems: 'flex-end',
+  },
+  reportTitle: {
+    fontSize: 11,
+    fontFamily: 'Helvetica-Bold',
+    color: TEXT,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  reportNumber: {
+    fontSize: 9,
+    color: MUTED,
     marginTop: 2,
   },
-  reportInfo: {
-    textAlign: 'right',
-    fontSize: 10,
-    color: '#ffffff',
+  headerRule: {
+    borderBottomWidth: 2,
+    borderBottomColor: LIME,
+    marginBottom: 18,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 25,
-    marginBottom: 25,
-    color: '#000000',
-    textAlign: 'center',
+
+  // ─── Sections ───────────────────────────────────────────────
+  sectionTitle: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: GREEN,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+    paddingBottom: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
   },
   section: {
-    marginBottom: 25,
-    backgroundColor: '#ffffff',
+    marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#064e3b',
-    backgroundColor: '#a3e635',
-    padding: 10,
-    marginLeft: -30,
-    marginRight: -30,
-    paddingLeft: 30,
-    paddingRight: 30,
-  },
-  row: {
+
+  // Deux colonnes d'infos (client / intervention)
+  twoCols: {
     flexDirection: 'row',
+    gap: 16,
+  },
+  col: {
+    flex: 1,
+    backgroundColor: BG_SOFT,
+    borderRadius: 6,
+    padding: 12,
+  },
+  colTitle: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
     marginBottom: 8,
-    paddingLeft: 30,
-    paddingRight: 30,
   },
-  label: {
-    width: '35%',
-    fontWeight: 'bold',
-    color: '#000000',
+  infoRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
   },
-  value: {
-    width: '65%',
-    color: '#000000',
+  infoLabel: {
+    width: '38%',
+    color: MUTED,
+    fontSize: 9,
   },
+  infoValue: {
+    width: '62%',
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: TEXT,
+  },
+
+  // Services
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 3,
+  },
+  serviceBullet: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: LIME,
+    marginTop: 4,
+    marginRight: 8,
+  },
+  serviceText: {
+    fontSize: 10,
+    flex: 1,
+  },
+
+  // Observations
+  commentsBox: {
+    backgroundColor: BG_SOFT,
+    borderLeftWidth: 3,
+    borderLeftColor: LIME,
+    padding: 10,
+    borderRadius: 4,
+    fontSize: 9.5,
+    color: TEXT,
+  },
+
+  // Photos
   photosGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 15,
-    paddingLeft: 30,
-    paddingRight: 30,
+    justifyContent: 'space-between',
   },
   photoContainer: {
-    width: '48%',
-    marginBottom: 15,
-  },
-  photoLabel: {
-    fontSize: 10,
-    marginBottom: 6,
-    fontWeight: 'bold',
-    color: '#064e3b',
-    backgroundColor: '#a3e635',
-    padding: 5,
-    textAlign: 'center',
+    width: '48.5%',
+    marginBottom: 12,
   },
   photo: {
     width: '100%',
-    height: 180,
+    height: 170,
     objectFit: 'cover',
-    border: '2 solid #064e3b',
+    borderRadius: 6,
   },
-  signaturesSection: {
-    backgroundColor: '#f8f9fa',
-    padding: 20,
-    marginTop: 30,
-    marginLeft: -30,
-    marginRight: -30,
-    borderTop: '3 solid #a3e635',
-  },
-  signatureContainer: {
-    width: '48%',
-    backgroundColor: '#ffffff',
-    padding: 15,
-    border: '1 solid #e5e7eb',
-  },
-  signatureLabel: {
-    fontSize: 12,
-    marginBottom: 8,
-    fontWeight: 'bold',
-    color: '#064e3b',
+  photoCaption: {
+    fontSize: 8,
+    color: MUTED,
+    marginTop: 4,
     textAlign: 'center',
   },
-  signature: {
-    width: '100%',
-    height: 100,
-    border: '1 solid #064e3b',
-    backgroundColor: '#ffffff',
-    objectFit: 'contain',
-  },
+
+  // Signatures
   signaturesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingLeft: 30,
-    paddingRight: 30,
+    gap: 16,
   },
-  footer: {
-    backgroundColor: '#064e3b',
-    color: '#ffffff',
-    padding: 15,
-    marginTop: 30,
-    marginLeft: -30,
-    marginRight: -30,
-    marginBottom: -30,
-    textAlign: 'center',
+  signatureBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 6,
+    padding: 10,
+  },
+  signatureLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  signatureImage: {
+    width: '100%',
+    height: 70,
+    objectFit: 'contain',
+  },
+  signaturePlaceholder: {
+    height: 70,
+    justifyContent: 'center',
+  },
+  signatureName: {
     fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: TEXT,
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    paddingTop: 5,
   },
-  emergencySection: {
-    backgroundColor: '#064e3b',
-    color: '#ffffff',
-    padding: 15,
-    marginTop: 20,
-    marginLeft: -30,
-    marginRight: -30,
+  signatureMention: {
+    fontSize: 7.5,
+    color: MUTED,
+    marginTop: 1,
+  },
+
+  // ─── Pied de page (répété) ──────────────────────────────────
+  footer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 40,
+    right: 40,
+  },
+  footerRule: {
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    marginBottom: 6,
+  },
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  emergencyLeft: {
-    paddingLeft: 30,
-  },
-  emergencyRight: {
-    backgroundColor: '#a3e635',
-    color: '#064e3b',
-    padding: 15,
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  comments: {
-    backgroundColor: '#f8f9fa',
-    padding: 15,
-    borderLeft: '4 solid #a3e635',
-    fontSize: 11,
-    lineHeight: 1.4,
-    marginLeft: -30,
-    marginRight: -30,
-    paddingLeft: 45,
-    paddingRight: 30,
-    color: '#000000',
-  },
-  interventionHeader: {
-    backgroundColor: '#064e3b',
-    color: '#ffffff',
-    padding: 25,
-    marginTop: 20,
-    marginLeft: -30,
-    marginRight: -30,
-    textAlign: 'center',
-  },
-  interventionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#a3e635',
-  },
-  interventionSubtitle: {
-    fontSize: 14,
-    color: '#ffffff',
-    marginTop: 5,
+  footerText: {
+    fontSize: 7.5,
+    color: MUTED,
   },
 });
+
+const SUBTYPE_LABELS: Record<string, string> = {
+  cleaning: 'Nettoyage',
+  coating: 'Protection / traitement',
+  repair: 'Réparation',
+  inspection: 'Inspection',
+  maintenance: 'Entretien',
+  demoussage: 'Démoussage de toiture + inspection gratuite et réparations nécessaires',
+  gouttieres: 'Nettoyage des gouttières',
+  hydrofuge_wax: 'Traitement hydrofuge (wax) – garantie 3 ans',
+  deplacement: 'Déplacement + carburant machine',
+  peinture_toiture: 'Peinture de toiture (anthracite)',
+  facade: 'Nettoyage de façade',
+  panneaux_solaires: 'Nettoyage des panneaux solaires',
+  nacelle: 'Location nacelle élévatrice',
+  terrasse: 'Nettoyage terrasse',
+  mur: 'Nettoyage de mur',
+  cheminee: 'Nettoyage cheminée',
+  piliers: 'Nettoyage piliers',
+  velux: 'Nettoyage velux / vitres',
+  driveway: 'Nettoyage allée',
+  escalier: 'Nettoyage escalier',
+  evac_mousse: 'Évacuation de la mousse',
+};
+
+const ROOF_LABELS: Record<string, string> = {
+  slate: 'Ardoise',
+  terracotta: 'Terre cuite',
+  concrete: 'Béton',
+  metal: 'Métal',
+  shingle: 'Bardeau',
+  other: 'Autre',
+};
+
+const MOSS_LABELS: Record<string, string> = { low: 'Faible', medium: 'Moyen', high: 'Fort' };
 
 interface ReportPDFProps {
   report: any;
@@ -228,297 +288,236 @@ interface ReportPDFProps {
 }
 
 export const ReportPDF: React.FC<ReportPDFProps> = ({ report, company }) => {
-  const formatDate = (date: string) => {
-    return format(new Date(date), 'dd MMMM yyyy', { locale: fr });
-  };
+  const formatDate = (date: string) => format(new Date(date), 'dd MMMM yyyy', { locale: fr });
+  const formatTime = (date: string) => format(new Date(date), 'HH:mm', { locale: fr });
+  const formatDateTime = (date: string) =>
+    format(new Date(date), "dd/MM/yyyy 'à' HH:mm", { locale: fr });
 
-  const formatDateTime = (date: string) => {
-    return format(new Date(date), 'dd/MM/yyyy à HH:mm', { locale: fr });
-  };
+  const beforePhotos = (report.photos ?? []).filter((p: any) => p.type === 'before');
+  const afterPhotos = (report.photos ?? []).filter((p: any) => p.type === 'after');
+  const reportNumber = report.id.slice(0, 8).toUpperCase();
+  const reportDate = report.completed_at || report.created_at;
+  const companyName = company?.company_name || 'GoBo Clean';
 
-  const getRoofTypeLabel = (type: string) => {
-    const types = {
-      slate: 'Ardoise',
-      terracotta: 'Terre cuite',
-      concrete: 'Béton',
-      metal: 'Métal',
-      shingle: 'Bardeau',
-      other: 'Autre',
-    };
-    return types[type] || type;
-  };
+  const Footer = () => (
+    <View style={styles.footer} fixed>
+      <View style={styles.footerRule} />
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>
+          {companyName}
+          {company?.company_address ? ` — ${company.company_address}` : ''}
+        </Text>
+        <Text
+          style={styles.footerText}
+          render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
+        />
+      </View>
+      <View style={[styles.footerRow, { marginTop: 2 }]}>
+        <Text style={styles.footerText}>
+          {[company?.company_email, company?.company_phone, company?.iban ? `IBAN ${company.iban}` : null]
+            .filter(Boolean)
+            .join('  ·  ')}
+        </Text>
+        <Text style={styles.footerText}>Rapport N° {reportNumber}</Text>
+      </View>
+    </View>
+  );
 
-  const getMossLevelLabel = (level: string) => {
-    const levels = {
-      low: 'Faible',
-      medium: 'Moyen',
-      high: 'Fort',
-    };
-    return levels[level] || level;
-  };
-
-  const getMissionTypeLabel = (type: string) => {
-    const types = {
-      roof: 'Nettoyage de toiture',
-      facade: 'Nettoyage de façade',
-      gutter: 'Nettoyage de gouttières',
-      terrace: 'Nettoyage de terrasse',
-      other: 'Autre',
-    };
-    return types[type] || type;
-  };
-
-  const getMissionSubtypeLabel = (subtype: string) => {
-    const subtypes = {
-      cleaning: 'Nettoyage',
-      coating: 'Protection/traitement',
-      repair: 'Réparation',
-      inspection: 'Inspection',
-      maintenance: 'Entretien',
-      // Catalogue de services Roof Revive (services.json)
-      demoussage: 'Démoussage de toiture + inspection gratuite et réparations nécessaires',
-      gouttieres: 'Nettoyage des gouttières',
-      hydrofuge_wax: 'Traitement hydrofuge (wax) – garantie 3 ans',
-      deplacement: 'Déplacement + carburant machine',
-      peinture_toiture: 'Peinture de toiture (anthracite)',
-      facade: 'Nettoyage de façade',
-      panneaux_solaires: 'Nettoyage des panneaux solaires',
-      nacelle: 'Location nacelle élévatrice',
-      terrasse: 'Nettoyage terrasse',
-      mur: 'Nettoyage de mur',
-      cheminee: 'Nettoyage cheminée',
-      piliers: 'Nettoyage piliers',
-      velux: 'Nettoyage velux / vitres',
-      driveway: 'Nettoyage allée',
-      escalier: 'Nettoyage escalier',
-      evac_mousse: 'Évacuation de la mousse',
-    };
-    return subtypes[subtype] || subtype;
-  };
-
-  const beforePhotos = report.photos.filter((p) => p.type === 'before');
-  const afterPhotos = report.photos.filter((p) => p.type === 'after');
-
-  return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.logoSection}>
-              <Image src="https://ihlnwzrsvfxgossytuiz.supabase.co/storage/v1/object/public/company-assets/goboclean-logo.png" style={styles.logo} />
-              <View>
-                <Text style={styles.companyName}>GoBo solutions</Text>
-                <Text style={styles.companyTagline}>Professional Cleaning</Text>
-              </View>
-            </View>
-            <View style={styles.reportInfo}>
-              <Text>Rapport N° {report.id.slice(0, 8).toUpperCase()}</Text>
-              <Text>{formatDate(report.completed_at || report.created_at)}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Intervention Header */}
-        <View style={styles.interventionHeader}>
-          <Text style={styles.interventionTitle}>INTERVENTION REPORT</Text>
-          <Text style={styles.interventionSubtitle}>Power & Precision in Industrial Cleaning</Text>
-        </View>
-
-        {/* Client Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informations Client</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Nom complet:</Text>
-            <Text style={styles.value}>
-              {report.client_first_name} {report.client_last_name}
-            </Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Adresse:</Text>
-            <Text style={styles.value}>{report.client_address}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Téléphone:</Text>
-            <Text style={styles.value}>{report.client_phone}</Text>
-          </View>
-        </View>
-
-        {/* Roof State */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>État de la Toiture</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Type de toiture:</Text>
-            <Text style={styles.value}>{getRoofTypeLabel(report.roof_type)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Surface:</Text>
-            <Text style={styles.value}>{report.roof_surface} m²</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Niveau de mousse:</Text>
-            <Text style={styles.value}>{getMossLevelLabel(report.moss_level)}</Text>
-          </View>
-        </View>
-
-        {/* Mission Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Détails de la Mission</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Type de mission:</Text>
-            <Text style={styles.value}>{getMissionTypeLabel(report.mission_type)}</Text>
-          </View>
-          {report.mission_subtypes && report.mission_subtypes.length > 0 && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Services:</Text>
-              <Text style={styles.value}>
-                {report.mission_subtypes.map(getMissionSubtypeLabel).join(', ')}
+  const PhotoSection = ({ title, photos, prefix }: { title: string; photos: any[]; prefix: string }) =>
+    photos.length === 0 ? null : (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.photosGrid}>
+          {photos.map((photo: any, index: number) => (
+            <View key={photo.id ?? index} style={styles.photoContainer} wrap={false}>
+              <Image src={photo.url} style={styles.photo} />
+              <Text style={styles.photoCaption}>
+                {prefix} — photo {index + 1}
               </Text>
             </View>
-          )}
-          {report.appointment_time && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Rendez-vous prévu:</Text>
-              <Text style={styles.value}>{formatDateTime(report.appointment_time)}</Text>
-            </View>
-          )}
-          {report.started_at && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Heure de début:</Text>
-              <Text style={styles.value}>{formatDateTime(report.started_at)}</Text>
-            </View>
-          )}
-          {report.completed_at && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Heure de fin:</Text>
-              <Text style={styles.value}>{formatDateTime(report.completed_at)}</Text>
-            </View>
-          )}
-          {report.surface_area && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Surface traitée:</Text>
-              <Text style={styles.value}>{report.surface_area} m²</Text>
-            </View>
-          )}
-          {report.additional_info && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Description:</Text>
-              <Text style={styles.value}>{report.additional_info}</Text>
-            </View>
-          )}
+          ))}
         </View>
+      </View>
+    );
 
-        {/* Worker Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Intervenant</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Technicien:</Text>
-            <Text style={styles.value}>
-              {report.worker.first_name} {report.worker.last_name}
+  return (
+    <Document
+      title={`Rapport d'intervention ${reportNumber}`}
+      author={companyName}
+      subject={`Intervention du ${formatDate(reportDate)}`}
+    >
+      <Page size="A4" style={styles.page}>
+        <View style={styles.headerBand} fixed />
+
+        {/* En-tête */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.companyName}>{companyName}</Text>
+            <Text style={styles.companyTagline}>Nettoyage & entretien de toitures</Text>
+          </View>
+          <View style={styles.reportMeta}>
+            <Text style={styles.reportTitle}>Rapport d'intervention</Text>
+            <Text style={styles.reportNumber}>
+              N° {reportNumber} · {formatDate(reportDate)}
             </Text>
           </View>
         </View>
+        <View style={styles.headerRule} />
 
-        {/* Comments */}
-        {report.comments && (
+        {/* Client & intervention */}
+        <View style={[styles.section, styles.twoCols]}>
+          <View style={styles.col}>
+            <Text style={styles.colTitle}>Client</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Nom</Text>
+              <Text style={styles.infoValue}>
+                {report.client_first_name} {report.client_last_name}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Adresse</Text>
+              <Text style={styles.infoValue}>{report.client_address}</Text>
+            </View>
+            {report.client_phone ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Téléphone</Text>
+                <Text style={styles.infoValue}>{report.client_phone}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.col}>
+            <Text style={styles.colTitle}>Intervention</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Date</Text>
+              <Text style={styles.infoValue}>
+                {report.appointment_time ? formatDate(report.appointment_time) : '—'}
+              </Text>
+            </View>
+            {report.started_at ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Début</Text>
+                <Text style={styles.infoValue}>{formatTime(report.started_at)}</Text>
+              </View>
+            ) : null}
+            {report.completed_at ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Fin</Text>
+                <Text style={styles.infoValue}>{formatTime(report.completed_at)}</Text>
+              </View>
+            ) : null}
+            {report.surface_area ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Surface</Text>
+                <Text style={styles.infoValue}>{report.surface_area} m²</Text>
+              </View>
+            ) : null}
+            {report.worker ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Technicien</Text>
+                <Text style={styles.infoValue}>
+                  {report.worker.first_name} {report.worker.last_name}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {/* État de la toiture — seulement si renseigné */}
+        {(report.roof_type || report.moss_level) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Observations Techniques</Text>
-            <View style={styles.comments}>
-              <Text>{report.comments}</Text>
+            <Text style={styles.sectionTitle}>État de la toiture</Text>
+            <View style={styles.twoCols}>
+              <View style={{ flex: 1 }}>
+                {report.roof_type ? (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Type</Text>
+                    <Text style={styles.infoValue}>
+                      {ROOF_LABELS[report.roof_type] || report.roof_type}
+                    </Text>
+                  </View>
+                ) : null}
+                {report.moss_level ? (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Mousse</Text>
+                    <Text style={styles.infoValue}>
+                      {MOSS_LABELS[report.moss_level] || report.moss_level}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={{ flex: 1 }} />
             </View>
           </View>
         )}
 
-        {/* Photos BEFORE */}
-        <View style={styles.section} break>
-          <Text style={styles.sectionTitle}>Photos AVANT Intervention</Text>
-          <View style={styles.photosGrid}>
-            {beforePhotos.map((photo, index) => (
-              <View key={photo.id} style={styles.photoContainer}>
-                <Text style={styles.photoLabel}>Photo {index + 1}</Text>
-                <Image src={photo.url} style={styles.photo} />
+        {/* Services effectués */}
+        {report.mission_subtypes?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Services effectués</Text>
+            {report.mission_subtypes.map((st: string) => (
+              <View key={st} style={styles.serviceRow}>
+                <View style={styles.serviceBullet} />
+                <Text style={styles.serviceText}>{SUBTYPE_LABELS[st] || st}</Text>
               </View>
             ))}
           </View>
-        </View>
+        )}
 
-        {/* Photos AFTER */}
-        <View style={styles.section} break>
-          <Text style={styles.sectionTitle}>Photos APRÈS Intervention</Text>
-          <View style={styles.photosGrid}>
-            {afterPhotos.map((photo, index) => (
-              <View key={photo.id} style={styles.photoContainer}>
-                <Text style={styles.photoLabel}>Photo {index + 1}</Text>
-                <Image src={photo.url} style={styles.photo} />
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Signatures Section */}
-        <View style={styles.signaturesSection}>
-          <Text style={styles.sectionTitle}>Authorization & Sign Off</Text>
-          <View style={styles.signaturesRow}>
-            <View style={styles.signatureContainer}>
-              <Text style={styles.signatureLabel}>Technicien Signature</Text>
-              {report.worker_signature_url ? (
-                <Image src={report.worker_signature_url} style={styles.signature} />
-              ) : (
-                <View style={styles.signature}>
-                  <Text style={{ fontSize: 9, color: '#888', textAlign: 'center', paddingTop: 40 }}>
-                    No signature available
-                  </Text>
-                </View>
-              )}
-              <Text style={{ fontSize: 8, marginTop: 6, color: '#064e3b', textAlign: 'center' }}>
-                {report.worker ? `${report.worker.first_name} ${report.worker.last_name}` : 'Worker'}
-              </Text>
+        {/* Observations */}
+        {report.comments ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Observations du technicien</Text>
+            <View style={styles.commentsBox}>
+              <Text>{report.comments}</Text>
             </View>
-            <View style={styles.signatureContainer}>
-              <Text style={styles.signatureLabel}>Client Signature</Text>
-              {report.client_signature_url ? (
-                <Image src={report.client_signature_url} style={styles.signature} />
+          </View>
+        ) : null}
+
+        {/* Photos */}
+        <PhotoSection title="Avant intervention" photos={beforePhotos} prefix="Avant" />
+        <PhotoSection title="Après intervention" photos={afterPhotos} prefix="Après" />
+
+        {/* Signatures */}
+        <View style={styles.section} wrap={false}>
+          <Text style={styles.sectionTitle}>Validation</Text>
+          <View style={styles.signaturesRow}>
+            <View style={styles.signatureBox}>
+              <Text style={styles.signatureLabel}>Signature du technicien</Text>
+              {report.worker_signature_url ? (
+                <Image src={report.worker_signature_url} style={styles.signatureImage} />
               ) : (
-                <View style={styles.signature}>
-                  <Text style={{ fontSize: 9, color: '#888', textAlign: 'center', paddingTop: 40 }}>
-                    No signature available
+                <View style={styles.signaturePlaceholder}>
+                  <Text style={{ fontSize: 8, color: MUTED, textAlign: 'center' }}>
+                    Non disponible
                   </Text>
                 </View>
               )}
-              <Text style={{ fontSize: 8, marginTop: 6, color: '#064e3b', textAlign: 'center' }}>
+              <Text style={styles.signatureName}>
+                {report.worker ? `${report.worker.first_name} ${report.worker.last_name}` : '—'}
+              </Text>
+              <Text style={styles.signatureMention}>Pour {companyName}</Text>
+            </View>
+            <View style={styles.signatureBox}>
+              <Text style={styles.signatureLabel}>Signature du client</Text>
+              {report.client_signature_url ? (
+                <Image src={report.client_signature_url} style={styles.signatureImage} />
+              ) : (
+                <View style={styles.signaturePlaceholder}>
+                  <Text style={{ fontSize: 8, color: MUTED, textAlign: 'center' }}>
+                    Non disponible
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.signatureName}>
                 {report.client_first_name} {report.client_last_name}
               </Text>
+              <Text style={styles.signatureMention}>« Bon pour accord »</Text>
             </View>
           </View>
-          <Text style={{ fontSize: 10, marginTop: 15, color: '#000', textAlign: 'center', paddingLeft: 30, paddingRight: 30 }}>
-            Customer self-effective to our topnotch 
-          </Text>
         </View>
 
-        {/* Emergency Response Section */}
-        <View style={styles.emergencySection}>
-          <View style={styles.emergencyLeft}>
-            <Text style={{ fontSize: 12, fontWeight: 'bold' }}>24/7 Emergency Response</Text>
-            <Text style={{ fontSize: 9, marginTop: 2 }}>
-              Hotline call +32-456-789-012 
-            </Text>
-            <Text style={{ fontSize: 9 }}>Service Solutions 24h/24</Text>
-          </View>
-          <View style={styles.emergencyRight}>
-            <Text>Service Solutions 24h/24</Text>
-          </View>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text>GoBo solutions - Professional Cleaning Services</Text>
-          <Text style={{ marginTop: 3 }}>
-            Email: info@goboclean.be | Phone: +32 56 25 63 83
-          </Text>
-          <Text style={{ marginTop: 3, fontSize: 8 }}>
-            Document généré le {formatDateTime(new Date().toISOString())}
-          </Text>
-        </View>
+        <Footer />
       </Page>
     </Document>
   );

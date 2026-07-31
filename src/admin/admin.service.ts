@@ -93,6 +93,17 @@ export class AdminService {
     return await this.supabaseService.getReports(workerId);
   }
 
+  async getCompany() {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('company_settings')
+      .select('company_name, company_email, company_phone, iban')
+      .limit(1)
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   async getWorkers() {
     const supabase = this.supabaseService.getClient();
     

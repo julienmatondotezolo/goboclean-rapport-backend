@@ -23,6 +23,12 @@ export class AdminController {
     return await this.adminService.getStatistics(startDate, endDate);
   }
 
+  @Get('company')
+  @ApiOperation({ summary: 'Company settings (name, iban) — for the SEPA payment QR' })
+  async getCompany() {
+    return await this.adminService.getCompany();
+  }
+
   @Get('workers')
   @ApiOperation({ summary: 'Get all workers' })
   @ApiResponse({ status: 200, description: 'Workers retrieved successfully' })

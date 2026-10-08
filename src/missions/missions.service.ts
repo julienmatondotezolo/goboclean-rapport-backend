@@ -57,6 +57,7 @@ export class MissionsService {
         additional_info: dto.additional_info || null,
         features: dto.features || {},
         equipment: dto.equipment || [],
+        price: dto.price ?? null,
         status: 'assigned',
       };
 
@@ -860,7 +861,13 @@ export class MissionsService {
 
     // Paiement encaissé sur place (avant signature) — 'differe' = pas de
     // paiement sur place : le bon partira quand l'admin l'enregistrera.
-    const paymentAmount = closure?.paymentAmount ? parseFloat(closure.paymentAmount) : null;
+    // Prix fixé sur la mission → il s'impose (l'ouvrier ne peut pas le changer).
+    const paymentAmount =
+      mission.price != null
+        ? Number(mission.price)
+        : closure?.paymentAmount
+          ? parseFloat(closure.paymentAmount)
+          : null;
     const paymentRecord =
       paymentMethod && paymentMethod !== 'differe'
         ? {
@@ -1006,7 +1013,7 @@ export class MissionsService {
 
     const payment = {
       method: dto.method,
-      amount: dto.amount ?? null,
+      amount: dto.amount ?? (mission.price != null ? Number(mission.price) : null),
       received_at: new Date().toISOString(),
       recorded_by: adminUserId,
     };

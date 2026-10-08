@@ -134,4 +134,10 @@ export class CreateMissionDto {
   @IsArray()
   @IsIn(EQUIPMENT_IDS, { each: true })
   equipment?: string[];
+
+  @ApiPropertyOptional({ description: 'Mission price in EUR (from the quote). Only admins can change it; imposed as payment amount at closure.' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  price?: number;
 }

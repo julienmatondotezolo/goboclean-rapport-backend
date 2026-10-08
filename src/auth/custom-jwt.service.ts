@@ -42,12 +42,20 @@ export class CustomJwtService {
     }
 
     // Use service role for admin operations
-    this.supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+    this.supabase = this.createAuthClient();
+  }
+
+  private createAuthClient() {
+    return createClient(
+      this.configService.get<string>('SUPABASE_URL')!,
+      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY')!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
       },
-    });
+    );
   }
 
   /**
@@ -59,8 +67,12 @@ export class CustomJwtService {
     console.log('🔐 CustomJWT: Login attempt for:', email);
 
     try {
-      // First, try to authenticate with Supabase
-      const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
+      // First, try to authenticate with Supabase — on a THROWAWAY client:
+      // signInWithPassword stores the user's session on the client it's called
+      // on, so doing it on the shared service-role client made every later
+      // query run as the last user who logged in (RLS → other users' tokens
+      // rejected as "User not found or inactive", register blocked by RLS).
+      const { data: authData, error: authError } = await this.createAuthClient().auth.signInWithPassword({
         email,
         password,
       });

@@ -1286,7 +1286,7 @@ export class MissionsService {
       .select('email')
       .in('id', workerIds);
 
-    return (workers || []).map((w) => w.email).filter(Boolean);
+    return this.withoutExcludedEmails((workers || []).map((w) => w.email));
   }
 
   private async getAdminEmails(): Promise<string[]> {
@@ -1296,7 +1296,19 @@ export class MissionsService {
       .select('email')
       .eq('role', 'admin');
 
-    return (admins || []).map((a) => a.email).filter(Boolean);
+    return this.withoutExcludedEmails((admins || []).map((a) => a.email));
+  }
+
+  // EMAIL_EXCLUDE (liste séparée par des virgules) : comptes qui ne reçoivent
+  // aucun email de rapport/notification (ex. comptes de test admin).
+  private withoutExcludedEmails(emails: (string | null | undefined)[]): string[] {
+    const excluded = (process.env.EMAIL_EXCLUDE || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    return emails
+      .filter((e): e is string => !!e)
+      .filter((e) => !excluded.includes(e.toLowerCase()));
   }
 
   // ---------------------------------------------------------------------------
@@ -1376,7 +1388,7 @@ export class MissionsService {
     }
 
     // Send report email to actual admin emails
-    const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
+    const adminEmails = this.withoutExcludedEmails((admins || []).map((a) => a.email));
     await this.emailService.sendPreReportEmail(mission, adminEmails);
   }
 
@@ -1417,9 +1429,9 @@ export class MissionsService {
     // Lot 3 (Ali) : le CLIENT ne reçoit plus rien à la complétion — le bon
     // d'exécution part à l'enregistrement du paiement (recordPayment).
     // Ici : admins + ouvriers uniquement.
-    const adminEmails = (admins || []).map((a) => a.email).filter(Boolean);
+    const adminEmails = (admins || []).map((a) => a.email);
     const workerEmails = await this.resolveWorkerEmails(mission.assigned_workers || []);
-    const recipientEmails = [...new Set([...adminEmails, ...workerEmails])];
+    const recipientEmails = this.withoutExcludedEmails([...new Set([...adminEmails, ...workerEmails])]);
     await this.emailService.sendMissionCompletedEmail(mission, recipientEmails, pdfBuffer);
   }
 }

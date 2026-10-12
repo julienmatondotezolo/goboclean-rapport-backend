@@ -11,6 +11,7 @@ import { MissionsModule } from './missions/missions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { StockModule } from './stock/stock.module';
 import { SalaryModule } from './salary/salary.module';
+import { ContactModule } from './contact/contact.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ServiceLoggerService } from './common/services/service-logger.service';
@@ -31,6 +32,7 @@ import { ServiceLoggerService } from './common/services/service-logger.service';
     MonitoringModule,
     StockModule,
     SalaryModule,
+    ContactModule,
   ],
   providers: [
     {

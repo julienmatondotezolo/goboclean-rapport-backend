@@ -681,4 +681,52 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       throw error;
     }
   }
+
+  /** Demande de devis du site vitrine → boîte(s) GoboClean (CONTACT_TO, séparées par des virgules). */
+  async sendContactRequest(req: {
+    name: string;
+    company?: string;
+    email: string;
+    phone?: string;
+    service?: string;
+    message: string;
+    locale?: string;
+  }): Promise<void> {
+    const to = (this.configService.get<string>('CONTACT_TO') || 'info@goboclean.be,roofrevive.be@gmail.com')
+      .split(',')
+      .map((e) => e.trim())
+      .filter(Boolean);
+    const esc = (v?: string) =>
+      (v || '—').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    const row = (label: string, value?: string) =>
+      `<tr><td style="padding:8px 12px;color:#64748b;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:8px 12px;color:#0f172a;font-weight:600">${esc(value)}</td></tr>`;
+
+    const { error } = await this.resend.emails.send({
+      from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
+      to,
+      replyTo: req.email,
+      subject: `Demande de devis — ${req.company ? `${req.company} (${req.name})` : req.name}`,
+      html: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f1f5f9;padding:24px;margin:0">
+<div style="max-width:600px;margin:auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
+  <div style="background:#0d2818;color:#fff;padding:20px 24px">
+    <div style="color:#a3e635;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold">Site goboclean.be</div>
+    <div style="font-size:20px;font-weight:bold;margin-top:4px">Nouvelle demande de devis</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0">
+    ${row('Nom', req.name)}${row('Société', req.company)}${row('Email', req.email)}${row('Téléphone', req.phone)}${row('Service', req.service)}${row('Langue', req.locale?.toUpperCase())}
+  </table>
+  <div style="padding:0 24px 24px">
+    <div style="color:#64748b;font-size:13px;margin-bottom:6px">Message</div>
+    <div style="background:#f8fafc;border-left:3px solid #a3e635;padding:12px 16px;white-space:pre-wrap;color:#0f172a;font-size:14px">${esc(req.message)}</div>
+    <p style="color:#94a3b8;font-size:12px;margin-top:20px">Répondez directement à cet email pour écrire au client.</p>
+  </div>
+</div></body></html>`,
+    });
+
+    if (error) {
+      this.logger.error(`❌ Contact request email failed: ${error.message}`);
+      throw new Error('Envoi impossible');
+    }
+    this.logger.log(`✅ Contact request from ${req.email} sent to ${to.join(', ')}`);
+  }
 }

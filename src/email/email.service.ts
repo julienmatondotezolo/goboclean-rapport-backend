@@ -705,12 +705,12 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       from: this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be',
       to,
       replyTo: req.email,
-      subject: `Demande de devis — ${req.company ? `${req.company} (${req.name})` : req.name}`,
+      subject: `Nouveau formulaire GoboClean — ${req.company ? `${req.company} (${req.name})` : req.name}`,
       html: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f1f5f9;padding:24px;margin:0">
 <div style="max-width:600px;margin:auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
   <div style="background:#0d2818;color:#fff;padding:20px 24px">
     <div style="color:#a3e635;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:bold">Site goboclean.be</div>
-    <div style="font-size:20px;font-weight:bold;margin-top:4px">Nouvelle demande de devis</div>
+    <div style="font-size:20px;font-weight:bold;margin-top:4px">Un formulaire GoboClean vient d'être rempli</div>
   </div>
   <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0">
     ${row('Nom', req.name)}${row('Société', req.company)}${row('Email', req.email)}${row('Téléphone', req.phone)}${row('Service', req.service)}${row('Langue', req.locale?.toUpperCase())}
@@ -728,5 +728,72 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       throw new Error('Envoi impossible');
     }
     this.logger.log(`✅ Contact request from ${req.email} sent to ${to.join(', ')}`);
+
+    // Accusé de réception au client : un échec ne doit pas faire échouer la demande (l'équipe l'a déjà reçue).
+    try {
+      await this.sendContactConfirmation(req);
+    } catch (e) {
+      this.logger.warn(`⚠️ Contact confirmation to ${req.email} failed: ${(e as Error).message}`);
+    }
+  }
+
+  /** Accusé de réception envoyé au client qui a rempli le formulaire du site, dans sa langue (FR/NL/EN). */
+  private async sendContactConfirmation(req: { name: string; email: string; message: string; locale?: string }): Promise<void> {
+    const lang = req.locale === 'nl' || req.locale === 'en' ? req.locale : 'fr';
+    const T = {
+      fr: {
+        subject: 'Nous avons bien reçu votre demande — GoboClean',
+        hello: `Bonjour ${req.name},`,
+        body: 'Merci pour votre demande. Notre équipe l\'a bien reçue et vous recontacte sous 24 heures ouvrables avec une proposition ou une date de visite technique.',
+        urgent: 'Pour une urgence (graffiti, pollution, souillure), appelez-nous directement, 24h/24 et 7j/7 :',
+        recap: 'Votre message',
+        sign: 'L\'équipe GoboClean',
+      },
+      nl: {
+        subject: 'Wij hebben uw aanvraag goed ontvangen — GoboClean',
+        hello: `Beste ${req.name},`,
+        body: 'Bedankt voor uw aanvraag. Ons team heeft ze goed ontvangen en neemt binnen 24 werkuren contact met u op met een voorstel of een datum voor een technisch bezoek.',
+        urgent: 'Bij dringende gevallen (graffiti, vervuiling, bevuiling) belt u ons rechtstreeks, 24/7:',
+        recap: 'Uw bericht',
+        sign: 'Het GoboClean-team',
+      },
+      en: {
+        subject: 'We have received your request — GoboClean',
+        hello: `Hello ${req.name},`,
+        body: 'Thank you for your request. Our team has received it and will get back to you within 24 business hours with a proposal or a date for a technical visit.',
+        urgent: 'For an emergency (graffiti, pollution, soiling), call us directly, 24/7:',
+        recap: 'Your message',
+        sign: 'The GoboClean team',
+      },
+    }[lang];
+    const esc = (v: string) =>
+      v.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+    const { error } = await this.resend.emails.send({
+      from: `GoboClean <${this.configService.get<string>('SMTP_FROM') || 'noreply@goboclean.be'}>`,
+      to: [req.email],
+      replyTo: this.configService.get<string>('CONTACT_REPLY_TO') || 'info@goboclean.be',
+      subject: T.subject,
+      html: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f3f4ee;padding:24px;margin:0">
+<div style="max-width:600px;margin:auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
+  <div style="background:#0b2416;color:#fff;padding:22px 24px">
+    <div style="font-size:22px;font-weight:bold;letter-spacing:-0.5px">Gobo<span style="color:#a3e635">Clean</span></div>
+    <div style="color:#a3e635;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:4px">VCA certified · 24/7</div>
+  </div>
+  <div style="padding:24px;color:#071a0f;font-size:15px;line-height:1.6">
+    <p style="margin:0 0 12px">${esc(T.hello)}</p>
+    <p style="margin:0 0 20px">${T.body}</p>
+    <div style="color:#5b6b60;font-size:13px;margin-bottom:6px">${T.recap}</div>
+    <div style="background:#f8fafc;border-left:3px solid #a3e635;padding:12px 16px;white-space:pre-wrap;font-size:14px">${esc(req.message)}</div>
+    <p style="margin:22px 0 6px">${T.urgent}</p>
+    <p style="margin:0 0 22px"><a href="tel:+32483501255" style="color:#0b2416;font-weight:bold;font-size:18px;text-decoration:none">+32 483 50 12 55</a></p>
+    <p style="margin:0">${T.sign}</p>
+  </div>
+  <div style="background:#f3f4ee;color:#5b6b60;font-size:12px;padding:14px 24px">GoboClean · J. Wielemansstraat 42, 1652 Beersel · BE 0799.936.135 · <a href="https://www.goboclean.be" style="color:#5b6b60">www.goboclean.be</a></div>
+</div></body></html>`,
+    });
+
+    if (error) throw new Error(error.message);
+    this.logger.log(`✅ Contact confirmation sent to ${req.email} (${lang})`);
   }
 }

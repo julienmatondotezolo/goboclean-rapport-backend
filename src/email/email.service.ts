@@ -744,7 +744,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       fr: {
         subject: 'Nous avons bien reçu votre demande — GoboClean',
         hello: `Bonjour ${req.name},`,
-        body: 'Merci pour votre demande. Notre équipe l\'a bien reçue et vous recontacte sous 24 heures ouvrables avec une proposition ou une date de visite technique.',
+        body: 'Merci pour votre demande. Notre équipe l\'a bien reçue et revient vers vous dans les plus brefs délais avec une proposition ou une date de visite technique.',
         urgent: 'Pour une urgence (graffiti, pollution, souillure), appelez-nous directement, 24h/24 et 7j/7 :',
         recap: 'Votre message',
         sign: 'L\'équipe GoboClean',
@@ -752,7 +752,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       nl: {
         subject: 'Wij hebben uw aanvraag goed ontvangen — GoboClean',
         hello: `Beste ${req.name},`,
-        body: 'Bedankt voor uw aanvraag. Ons team heeft ze goed ontvangen en neemt binnen 24 werkuren contact met u op met een voorstel of een datum voor een technisch bezoek.',
+        body: 'Bedankt voor uw aanvraag. Ons team heeft ze goed ontvangen en neemt zo snel mogelijk contact met u op met een voorstel of een datum voor een technisch bezoek.',
         urgent: 'Bij dringende gevallen (graffiti, vervuiling, bevuiling) belt u ons rechtstreeks, 24/7:',
         recap: 'Uw bericht',
         sign: 'Het GoboClean-team',
@@ -760,7 +760,7 @@ body{font-family:sans-serif;color:#333;max-width:600px;margin:auto;padding:20px}
       en: {
         subject: 'We have received your request — GoboClean',
         hello: `Hello ${req.name},`,
-        body: 'Thank you for your request. Our team has received it and will get back to you within 24 business hours with a proposal or a date for a technical visit.',
+        body: 'Thank you for your request. Our team has received it and will get back to you as soon as possible with a proposal or a date for a technical visit.',
         urgent: 'For an emergency (graffiti, pollution, soiling), call us directly, 24/7:',
         recap: 'Your message',
         sign: 'The GoboClean team',

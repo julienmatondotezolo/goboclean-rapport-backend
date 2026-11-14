@@ -12,8 +12,8 @@ export class AuthService {
   /**
    * 🔑 NEW: Backend-controlled login with custom JWT
    */
-  async login(credentials: LoginCredentials) {
-    return await this.customJwtService.login(credentials);
+  async login(credentials: LoginCredentials, client?: { ip: string; userAgent: string }) {
+    return await this.customJwtService.login(credentials, client);
   }
 
   /**

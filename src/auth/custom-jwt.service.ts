@@ -61,7 +61,7 @@ export class CustomJwtService {
   /**
    * Authenticate user with email/password using Supabase Admin API
    */
-  async login(credentials: LoginCredentials) {
+  async login(credentials: LoginCredentials, client?: { ip: string; userAgent: string }) {
     const { email, password } = credentials;
 
     console.log('🔐 CustomJWT: Login attempt for:', email);
@@ -111,8 +111,8 @@ export class CustomJwtService {
       await this.supabase.from('user_activity').insert({
         user_id: profile.id,
         activity_type: 'login',
-        user_agent: 'backend-jwt',
-        device_info: { backend_auth: true },
+        user_agent: client?.userAgent || 'backend-jwt',
+        device_info: { backend_auth: true, ip: client?.ip || null, email: profile.email },
       });
 
       console.log('✅ CustomJWT: Login successful for:', email);

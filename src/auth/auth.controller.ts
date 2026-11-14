@@ -7,8 +7,10 @@ import {
   UploadedFile,
   BadRequestException,
   Put,
-  Body 
+  Body,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { BackendAuthGuard } from './backend-auth.guard';
@@ -27,8 +29,15 @@ export class AuthController {
    */
   @Post('login')
   @ApiOperation({ summary: 'Login with email and password' })
-  async login(@Body() credentials: LoginCredentials) {
-    return await this.authService.login(credentials);
+  async login(@Body() credentials: LoginCredentials, @Req() req: Request) {
+    // Real client IP behind nginx (X-Forwarded-For), recorded on each login.
+    const ip =
+      String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+      String(req.headers['x-real-ip'] || '') ||
+      req.ip ||
+      '';
+    const userAgent = String(req.headers['user-agent'] || '').slice(0, 500);
+    return await this.authService.login(credentials, { ip, userAgent });
   }
 
   /**

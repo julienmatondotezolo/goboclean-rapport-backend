@@ -26,10 +26,12 @@ export class AuthService {
   /**
    * 🔑 NEW: Logout user (token blacklist would go here in production)
    */
-  async logout(userId: string) {
+  async logout(userId: string, sid?: string) {
     const supabase = this.supabaseService.getClient();
     
     try {
+      await this.customJwtService.endSession(sid);
+
       // Log logout activity
       await supabase.from('user_activity').insert({
         user_id: userId,

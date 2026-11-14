@@ -60,7 +60,8 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout user' })
   async logout(@CurrentUser() user: any) {
-    return await this.authService.logout(user.sub);
+    // request.user has `id` (not `sub`) — the old call logged logouts with user_id undefined.
+    return await this.authService.logout(user.id, user.sid);
   }
 
   @Get('me')

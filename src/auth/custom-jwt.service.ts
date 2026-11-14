@@ -8,6 +8,7 @@ export interface JwtPayload {
   sub: string; // user ID
   email: string;
   role: string;
+  sid?: string; // user_sessions.id — absent on tokens issued before 14/11/2026
   iat: number;
   exp: number;
 }
@@ -99,10 +100,14 @@ export class CustomJwtService {
       }
 
       // Generate custom JWT token (let JWT module handle expiration)
+      // One row per login in user_sessions (IP, device, last activity, logout).
+      const sid = await this.startSession(profile.id, profile.email, client);
+
       const payload = {
         sub: profile.id,
         email: profile.email,
         role: profile.role,
+        ...(sid ? { sid } : {}),
       };
 
       const accessToken = await this.jwtService.signAsync(payload);
@@ -259,6 +264,66 @@ export class CustomJwtService {
       console.error('❌ CustomJWT: Token validation failed:', error);
       throw new UnauthorizedException('Invalid token');
     }
+  }
+
+  // ============================================================
+  // Connection log (table user_sessions, migration 017)
+  // Never blocks auth: a DB error only means the connection isn't logged.
+  // ============================================================
+  private readonly TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // matches JwtModule expiresIn
+  private readonly TOUCH_EVERY_MS = 60 * 1000;
+  private lastTouch = new Map<string, number>();
+
+  private async startSession(
+    userId: string,
+    email: string,
+    client?: { ip: string; userAgent: string },
+  ): Promise<string | null> {
+    const { data, error } = await this.supabase
+      .from('user_sessions')
+      .insert({
+        user_id: userId,
+        email,
+        ip: client?.ip || null,
+        user_agent: client?.userAgent || null,
+        expires_at: new Date(Date.now() + this.TOKEN_TTL_MS).toISOString(),
+      })
+      .select('id')
+      .single();
+    if (error) {
+      console.error('❌ CustomJWT: user_sessions insert failed:', error.message);
+      return null;
+    }
+    return data.id;
+  }
+
+  /** Update last_seen_at, at most once per minute per session. */
+  touchSession(sid?: string): void {
+    if (!sid) return;
+    const now = Date.now();
+    if (now - (this.lastTouch.get(sid) || 0) < this.TOUCH_EVERY_MS) return;
+    this.lastTouch.set(sid, now);
+    if (this.lastTouch.size > 5000) this.lastTouch.clear();
+    this.supabase
+      .from('user_sessions')
+      .update({ last_seen_at: new Date(now).toISOString() })
+      .eq('id', sid)
+      .is('logged_out_at', null)
+      .then(({ error }) => {
+        if (error) console.error('❌ CustomJWT: user_sessions touch failed:', error.message);
+      });
+  }
+
+  async endSession(sid?: string): Promise<void> {
+    if (!sid) return;
+    this.lastTouch.delete(sid);
+    const now = new Date().toISOString();
+    const { error } = await this.supabase
+      .from('user_sessions')
+      .update({ logged_out_at: now, last_seen_at: now })
+      .eq('id', sid)
+      .is('logged_out_at', null);
+    if (error) console.error('❌ CustomJWT: user_sessions logout failed:', error.message);
   }
 
   /**

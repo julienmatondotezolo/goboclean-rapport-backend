@@ -12,6 +12,7 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     role: string;
+    sid?: string;
     aud: string;
     exp: number;
   };
@@ -43,9 +44,13 @@ export class BackendAuthGuard implements CanActivate {
         id: payload.sub,
         email: payload.email,
         role: payload.role,
+        sid: payload.sid,
         aud: 'authenticated',
         exp: payload.exp,
       };
+
+      // Connection log: mark this session as active (throttled, non-blocking).
+      this.customJwtService.touchSession(payload.sid);
 
       return true;
     } catch (error) {
